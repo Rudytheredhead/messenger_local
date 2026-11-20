@@ -1,0 +1,22 @@
+[package]
+name = "messenger_local"
+version = "0.1.0"
+edition = "2024"
+description = "Ultra-lekkowy wrapper Messenger Desktop (Tauri v2) — prywatność, bezpieczeństwo, minimalne RAM"
+license = "MIT"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+tauri = { version = "2.0", features = ["tray-icon"] }
+tauri-plugin-opener = "2.0"
+tauri-plugin-notification = "2.0"
+url = { version = "2.5", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
