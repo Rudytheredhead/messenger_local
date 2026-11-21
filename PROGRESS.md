@@ -1,92 +1,93 @@
 # Progress: Messenger Local (Tauri v2)
 
-## ✅ Completed
+Status na 2026-11-21: aplikacja kompletna pod względem kodu zgodnie z `To-Do.md` (Kroki 1–4).
+Pozostają weryfikacje wymagające Twojego konta Messengera i monitora sieci (sekcja "Do zrobienia ręcznie").
 
-### 1. Rust Toolchain
-- Installed Rust via rustup (MSVC + **GNU/MinGW** toolchains)
-- `cargo` and `rustc` available at `~/.cargo/bin/`
+## ✅ Zrobione
 
-### 2. Project Structure Created
+### 1. Toolchain
+- Rust (rustup): toolchain GNU (MinGW/WinLibs UCRT) działa; MSVC wymaga VS BuildTools w PATH.
+- Build: `cargo build --release` w `messenger_local/` → `target/release/messenger_local.exe` (≈3,1 MB).
+
+### 2. Struktura projektu
 ```
-messenger_local/
-├── Cargo.toml (root workspace)
-├── src/
-│   └── lib.rs
+messenger_local/              (repo git)
+├── Cargo.toml                workspace; [profile.release] tylko tutaj
+├── Cargo.lock                śledzony (aplikacja)
+├── dist/index.html           placeholder wymagany przez frontendDist (okno ładuje zdalny URL)
 └── src-tauri/
     ├── Cargo.toml
     ├── build.rs
     ├── tauri.conf.json
-    ├── capabilities/
-    │   └── default.json
-    ├── src/
-    │   ├── main.rs
-    │   └── lib.rs
-    └── icons/ ✅ **Created** (`icon.ico`, `icon.png`, `icon.icns`, `tray-icon.png`)
+    ├── capabilities/default.json
+    ├── icons/                icon.ico, icon.png, tray-icon.png
+    └── src/{main.rs, lib.rs}
 ```
+Usunięto: martwy `src/lib.rs` (szablon `add()`), duplikat `[profile.release]` z `src-tauri/Cargo.toml`.
 
-### 3. Configuration Files
+### 3. Konfiguracja (`tauri.conf.json`)
+- `app.windows: []` — okno tworzone w kodzie (potrzebne do `data_directory`, `on_navigation`, `on_new_window`).
+- Usunięto `app.trayIcon` (powodowało drugą ikonę w zasobniku bez menu) i `devUrl`.
+- Usunięto zduplikowany klucz `titleBarStyle`.
+- `bundle.icon`: `icons/icon.ico` + `icons/icon.png` (bundler Windows wymaga `.ico`).
+- `withGlobalTauri: false`, CSP bez zmian.
 
-**Root `Cargo.toml`** - Workspace with release profile optimized for size/RAM:
-- `lto = true`, `strip = true`, `opt-level = "z"`, `codegen-units = 1`, `panic = "abort"`
+### 4. Logika (`src-tauri/src/lib.rs`)
+- **Filtr nawigacji** (`on_navigation`): dozwolone tylko `https`, bez loginu/hasła w URL, bez niestandardowego portu, host = `facebook.com`/`messenger.com`/`fbcdn.net`/`fbsbx.com` lub ich subdomena. `about:blank` dozwolony.
+- **Obce linki https** → blokowane w oknie i otwierane w przeglądarce systemowej (`tauri-plugin-opener`, `open_url`). Inne schematy (http, javascript, file, data) są po prostu blokowane.
+- **Nowe okna** (`target=_blank`, `window.open`): domeny Mety nawigowane w głównym oknie, reszta do przeglądarki; zawsze `NewWindowResponse::Deny` (bez dodatkowych okien WebView).
+- **Izolowany profil**: `data_directory = %LOCALAPPDATA%\com.messenger.local\webview-profile`.
+- **Wylogowanie** (tray): `clear_all_browsing_data()` (ciasteczka, cache, local storage tego WebView), potem nawigacja na stronę Messengera (pokaże logowanie). Poprzednia wersja usuwała katalog `app_data_dir/webview`, którego WebView nie używał.
+- **Zamknięcie okna** → ukrycie do zasobnika (bez `unwrap`, bo przy `panic = "abort"` każda panika zabija proces).
+- **Zasobnik**: jedna ikona (`main-tray`), lewy klik pokazuje okno, prawy — menu (Otwórz / Wyloguj / Zakończ). Brak `unwrap` przy ikonie.
+- `contentProtected(true)` ustawione w builderze okna.
 
-**`src-tauri/Cargo.toml`** - Dependencies:
-- `tauri` v2.0 with features: `tray-icon`
-- `tauri-plugin-opener` v2.0
-- `tauri-plugin-notification` v2.0
-- `url` v2.5 (for URL parsing in navigation filter)
+### 5. Testy
+- Testy jednostkowe filtra URL dodane w `lib.rs` (`mod tests`): dozwolone domeny Mety, blokada http/javascript/file/data, domeny podobne (`evilfacebook.com`, `facebook.com.evil.org`), blokada loginu w URL i portów.
+- Wykonane: skopiowana logika filtra w osobnym crate → **4/4 testy OK**.
+- Uwaga: `cargo test` w tym projekcie kończy się `STATUS_ENTRYPOINT_NOT_FOUND` (0xc0000139) jeszcze przed uruchomieniem testów — problem środowiska/toolchainu GNU, nie logiki. Do zbadania (np. toolchain MSVC z VS BuildTools).
 
-**`tauri.conf.json`** - Fully configured:
-- Window URL: `https://www.facebook.com/messages`
-- `withGlobalTauri: false` (complete isolation from Rust backend)
-- Strict CSP allowing only Meta domains (`facebook.com`, `messenger.com`, `fbcdn.net`, `fbsbx.com`)
-- `contentProtection: true` (prevents screenshots/recording)
-- Tray icon menu: "Otwórz", "Wyloguj / Wyczyść sesję", "Zakończ"
-- Opener plugin configured for external links
+### 6. Weryfikacja builda
+- `cargo build --release` — OK. Jedyne ostrzeżenie: linker GNU `.rsrc merge failure: multiple non-default manifests` (nieblokujące, wynika z manifestu Tauri + GNU).
+- Uruchomienie `messenger_local.exe` — proces żyje po 20 s.
 
-**`capabilities/default.json`** - Least privilege:
-- Only: `core:default`, window controls, `webview:allow-on-navigation`, `opener:default`, `notification:default`, `tray:default`
-- **NO** `fs`, **NO** `shell`, **NO** filesystem access
+### 7. Repo
+- `.gitignore`: `/target`, `/src-tauri/gen`, pliki IDE/OS/logi.
+- Commity: `43e3ce6` (porządki i konfiguracja), `3921258` (nawigacja, okno, wylogowanie, zasobnik).
 
-### 4. Rust Logic (`src-tauri/src/lib.rs`)
+## 🛡️ Raport bezpieczeństwa (Krok 5.1 / 5.3)
 
-- **Navigation filter** (`on_navigation`): Allows only `https://` + subdomains of allowed Meta domains; everything else opens in system browser via `tauri-plugin-opener`
-- **Tray menu** with three actions:
-  - "Otwórz" → shows/focuses main window
-  - "Wyloguj / Wyczyść sesję" → navigates to Facebook logout + deletes `app_data_dir/webview` (clears cookies/cache)
-  - "Zakończ" → exits app
-- **Window close behavior**: Hide to tray instead of closing (prevents accidental logout)
+**Zależności bezpośrednie** (`cargo tree --depth 1`):
+| Crate | Wersja | Uzasadnienie |
+|---|---|---|
+| `tauri` | 2.12.7 | Okno, WebView2, zasobnik, IPC (tylko okno lokalne, brak uprawnień dla zdalnej strony). |
+| `tauri-plugin-opener` | 2.7.3 | Otwieranie obcych linków w przeglądarce systemowej. |
+| `tauri-plugin-notification` | 2.8.1 | Powiadomienia systemowe (wymaga dalszej decyzji — patrz niżej). |
+| `url` | 2.5.8 | Parsowanie i walidacja URL w filtrze nawigacji. |
+| `serde_json` | 1.0.154 | Wymagany przez Tauri. |
+Łącznie ~559 crate'ów w grafie (głównie transitive z Tauri/wry/tao). Dokładna lista: `cargo tree -p messenger_local`.
 
-### 5. Entry Point (`src-tauri/src/main.rs`)
-```rust
-use messenger_local::run;
-fn main() { run(); }
-```
+**Izolacja danych:**
+- Sesja, ciasteczka i cache: wyłącznie w `data_directory` tej aplikacji.
+- Brak `fs`, `shell`, `http` w capabilities; brak dostępu strony do API Rusta (`withGlobalTauri: false`).
+- Aplikacja nie czyta ani nie zapisuje haseł/tokenów/treści wiadomości — nie ma kodu, który by to robił.
 
-### 6. **Build Successful** ✅
-- `cargo build --release` completed in ~1m 14s with GNU/MinGW toolchain (incremental)
-- Binary: `target/release/messenger_local.exe` (~8-10 MB stripped with LTO)
+**Ograniczenia, które trzeba znać:**
+- **CSP** w `tauri.conf.json` dotyczy zasobów lokalnych aplikacji. Zdalna strona `facebook.com` nie jest nią objęta — jej ochrona to filtr nawigacji i brak IPC dla zdalnej treści.
+- **Brak capability `remote`** — zdalna strona nie ma dostępu do `opener`/`notification` przez IPC. Powiadomienia z Messengera (Web Notifications API) zależą od WebView2; osobne `notification:default` nie zadziała z poziomu strony.
+- **Instalator Windows** używa `downloadBootstrapper` — podczas instalacji pobiera WebView2 z serwerów Microsoft (nie Mety, nie działa w czasie pracy aplikacji). Alternatywa: `embedBootstrapper` (większy instalator, zero pobierania).
+- **Pliki `icons/create_icons.ps1`/`create_ico.py`** — generatory, nie wchodzą do builda.
 
-### 7. **Test Launch Successful** ✅
-- Application starts without errors
-- Loads `https://www.facebook.com/messages` in WebView2
-- Tray icon appears with menu: "Otwórz", "Wyloguj / Wyczyść sesję", "Zakończ"
-- Window close → hides to tray (not exit)
-- External links would open in system browser (via opener plugin)
+## ⏳ Do zrobienia ręcznie (wymaga Twojego konta / monitora)
 
----
+1. **Logowanie i sesja** — zaloguj się, zamknij okno (ma się schować), przywróć z zasobnika; sprawdź, że lewy klik pokazuje okno, a menu działa.
+2. **Wylogowanie** — po „Wyloguj / Wyczyść sesję” sprawdź, że trzeba zalogować się ponownie (ciasteczka usunięte). Uwaga: `clear_all_browsing_data` jest asynchroniczne; jeśli po wylogowaniu sesja nadal działa, dodamy opóźnienie/ponowne czyszczenie.
+3. **Linki zewnętrzne** — kliknij link spoza Mety w czacie → ma się otworzyć w przeglądarce, a okno zostać na Messengerze.
+4. **RAM** — po zalogowaniu i zminimalizowaniu do zasobnika (cel < 150 MB; Menedżer zadań → Szczegóły → `messenger_local.exe` i procesy `msedgewebview2.exe`; suma całego drzewa procesów).
+5. **Ruch sieciowy** — Resource Monitor → Sieć: połączenia tylko do adresów IP Mety (np. `whois` na IP z listy połączeń). Wymaga działającego logowania.
+6. **Instalator** — `cargo tauri build` (potrzebny `tauri-cli`): sprawdzić, czy powstaje bundle MSI/NSIS.
 
-## ⏳ In Progress
-
-| Task | Status |
-|------|--------|
-| Verify RAM usage < 150 MB after login + minimize to tray | 🔄 **Next** |
-| Network verification (Wireshark/Resource Monitor → only Meta IPs) | ⏳ Pending |
-| Security Report (dependencies justification, isolation proof) | ⏳ Pending |
-
----
-
-## Next Steps
-
-1. **RAM measurement** - Check memory usage after login + minimize to tray
-2. **Network audit** - Confirm only Meta domains contacted
-3. **Security Report** - Document dependencies, isolation proof
+## ⚠️ Znane problemy / dług
+- `cargo test` (binarka testowa) — `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU; testy filtra przeszły w osobnym crate. Do sprawdzenia na MSVC.
+- Brak testów E2E (WebView wymaga GUI i konta).
+- Ikona tray i okna: tylko `icon.ico`/`icon.png`; brak `icon.icns` (macOS nie jest celem na razie).
