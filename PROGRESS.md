@@ -126,3 +126,13 @@ Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules
 - Ręcznie: logowanie w Messengerze w child webview, animacja rozwijania, skrót, zasobnik, pomiar RAM z WebView2, ruch sieciowy.
 - `cargo test` binarki Tauri: `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU (znane).
 - Instalator (`cargo tauri build`) jeszcze nie uruchamiany.
+
+
+### RAM — redukcja (2026-11-21)
+- Pomiar bazowy (zwinięta wyspa, Messenger załadowany): proces aplikacji ~25 MB; procesy WebView2 z profilu aplikacji ~737 MB (Working Set), 9 procesów.
+- Próby flag Chromium przez `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` (`--renderer-process-limit=1`, `--disable-gpu`): brak wyraźnej poprawy w szumie pomiarowym — odrzucone.
+- **Usypianie strony Messengera** (`core/suspend.rs`, WebView2 `TrySuspend`/`Resume`): po 5 min zwinięcia (domyślnie) strona jest uśpiona; po rozwinięciu wznawiana. Wynik po 100 s: Working Set **737 → 416 MB (−44%)**, Private 445 → 419 MB (−6%). Sama aplikacja nie ulega zmianie.
+- Uśpienie jest **opcjonalne i domyślnie wyłączone** (przełącznik „Uśpij Messengera po 5 min” w zasobniku). Powód: uśpiona strona nie odbiera wiadomości, więc licznik nieprzeczytanych jest zamrożony. Ustawienia środowiskowe do strojenia: `MESSENGER_ISLAND_AUTO_SUSPEND=1`, `MESSENGER_ISLAND_SUSPEND_SECS=<n>`.
+- Animacje CSS licznika działają tylko przy zwiniętej wyspie z nieprzeczytanymi (spec: usypianie animacji).
+- Weryfikacja: `cargo build --release` OK; log WebView2 potwierdził `TrySuspend success=true` i `Resume` przy rozwinięciu (diagnostyka usunięta z kodu).
+- Pomiary: zrzut z PowerShell (`Get-CimInstance` + `Get-Process`), jeden przebieg na konfigurację, zależne od stanu strony (zalogowany/niezalogowany) — traktować jako orientacyjne.

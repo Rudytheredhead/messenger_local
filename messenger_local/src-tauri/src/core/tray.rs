@@ -1,10 +1,11 @@
 use tauri::{
+    Manager,
     menu::{CheckMenuItem, Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Runtime,
 };
 
-use crate::core::window_manager;
+use crate::core::{suspend, window_manager};
 use crate::modules::messenger;
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -17,11 +18,21 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         false,
         None::<&str>,
     )?;
+    let suspend_enabled = app.state::<crate::core::suspend::SuspendPolicy>().enabled();
+    let suspend_item = CheckMenuItem::with_id(
+        app,
+        "toggle_suspend",
+        "Uśpij Messengera po 5 min (licznik zamrożony)",
+        true,
+        suspend_enabled,
+        None::<&str>,
+    )?;
     let logout = MenuItem::with_id(app, "logout", "Wyloguj / Wyczyść sesję", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Zakończ", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &hide, &logout, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &hide, &suspend_item, &logout, &quit])?;
 
     let hide_item = hide.clone();
+    let suspend_handle = suspend_item.clone();
     let mut tray = TrayIconBuilder::with_id("main-tray")
         .tooltip("Messenger Island")
         .menu(&menu)
@@ -33,6 +44,11 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             "toggle_hidden" => {
                 let hidden = window_manager::toggle_user_hidden(app);
                 let _ = hide_item.set_checked(hidden);
+            }
+            "toggle_suspend" => {
+                let enabled = !app.state::<suspend::SuspendPolicy>().enabled();
+                suspend::set_enabled(app, enabled);
+                let _ = suspend_handle.set_checked(enabled);
             }
             "logout" => messenger::logout(app),
             "quit" => app.exit(0),

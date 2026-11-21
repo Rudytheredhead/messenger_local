@@ -2230,6 +2230,7 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "url",
+ "webview2-com",
  "windows",
 ]
 

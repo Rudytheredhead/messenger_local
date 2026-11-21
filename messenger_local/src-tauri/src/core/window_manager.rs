@@ -14,6 +14,7 @@ use tauri::webview::WebviewBuilder;
 use tauri::WebviewUrl;
 
 use crate::core::state::{IslandFlags, IslandStore};
+use crate::core::suspend;
 use crate::modules::messenger::{self, Messenger};
 use crate::modules::ModuleRegistry;
 
@@ -58,6 +59,10 @@ pub fn snapshot<R: Runtime>(app: &AppHandle<R>) -> IslandState {
 
 pub fn emit_state<R: Runtime>(app: &AppHandle<R>) {
     let _ = app.emit(STATE_EVENT, snapshot(app));
+}
+
+pub fn is_expanded<R: Runtime>(app: &AppHandle<R>) -> bool {
+    current_flags(app).expanded
 }
 
 fn current_flags<R: Runtime>(app: &AppHandle<R>) -> IslandFlags {
@@ -108,6 +113,8 @@ pub fn create<R: Runtime>(app: &AppHandle<R>, messenger: Arc<Messenger>) -> taur
     if let Some(msg) = app.get_webview(messenger::LABEL) {
         msg.hide()?;
     }
+    // Wyspa startuje zwinięta — zaplanuj ewentualne uśpienie strony.
+    suspend::schedule(app);
 
     let (origin_x, screen_w) = monitor_metrics(&window)?;
     window.set_position(LogicalPosition::new(origin_x + centered_x(screen_w, w), TOP_MARGIN))?;
@@ -144,10 +151,13 @@ pub fn set_expanded<R: Runtime>(app: &AppHandle<R>, expanded: bool) -> tauri::Re
         return Ok(());
     };
     let msg = app.get_webview(messenger::LABEL);
-    if !expanded {
+    if expanded {
+        suspend::resume(app);
+    } else {
         if let Some(m) = &msg {
             m.hide()?;
         }
+        suspend::schedule(app);
     }
 
     let scale = window.scale_factor()?;
