@@ -1,0 +1,33 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Tauri
+/src-tauri/target
+/src-tauri/gen
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+NUL
+
+# Build artifacts
+*.exe
+*.dll
+*.lib
+*.exp
+*.pdb
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp

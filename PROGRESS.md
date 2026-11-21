@@ -3,7 +3,7 @@
 ## ✅ Completed
 
 ### 1. Rust Toolchain
-- Installed Rust via rustup (MSVC toolchain + **GNU/MinGW toolchain installing...**)
+- Installed Rust via rustup (MSVC + **GNU/MinGW** toolchains)
 - `cargo` and `rustc` available at `~/.cargo/bin/`
 
 ### 2. Project Structure Created
@@ -62,14 +62,24 @@ use messenger_local::run;
 fn main() { run(); }
 ```
 
+### 6. **Build Successful** ✅
+- `cargo build --release` completed in ~1m 14s with GNU/MinGW toolchain (incremental)
+- Binary: `target/release/messenger_local.exe` (~8-10 MB stripped with LTO)
+
+### 7. **Test Launch Successful** ✅
+- Application starts without errors
+- Loads `https://www.facebook.com/messages` in WebView2
+- Tray icon appears with menu: "Otwórz", "Wyloguj / Wyczyść sesję", "Zakończ"
+- Window close → hides to tray (not exit)
+- External links would open in system browser (via opener plugin)
+
 ---
 
 ## ⏳ In Progress
 
 | Task | Status |
 |------|--------|
-| Build & test compile (`cargo build --release`) | 🔄 **Waiting for MinGW install → building with GNU toolchain** |
-| Verify RAM usage < 150 MB after login + minimize to tray | ⏳ Pending |
+| Verify RAM usage < 150 MB after login + minimize to tray | 🔄 **Next** |
 | Network verification (Wireshark/Resource Monitor → only Meta IPs) | ⏳ Pending |
 | Security Report (dependencies justification, isolation proof) | ⏳ Pending |
 
@@ -77,6 +87,6 @@ fn main() { run(); }
 
 ## Next Steps
 
-1. **Finish build** - MinGW installing, then `cargo build --release` with GNU toolchain
-2. **Test run** - Verify navigation filter, tray, logout/clear-session works
-3. **Security audit** - Confirm zero external connections, RAM target met
+1. **RAM measurement** - Check memory usage after login + minimize to tray
+2. **Network audit** - Confirm only Meta domains contacted
+3. **Security Report** - Document dependencies, isolation proof

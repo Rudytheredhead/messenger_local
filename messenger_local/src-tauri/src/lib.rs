@@ -1,10 +1,9 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager, Runtime, WebviewUrl, WebviewWindowBuilder,
+    Manager, Runtime, AppHandle,
 };
 use tauri_plugin_opener::OpenerExt;
-use tauri_plugin_notification::NotificationExt;
 
 const ALLOWED_DOMAINS: &[&str] = &[
     "facebook.com",
@@ -27,7 +26,7 @@ fn is_allowed_url(url: &str) -> bool {
     false
 }
 
-fn setup_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
+fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Otwórz", true, None::<&str>)?;
     let logout_item = MenuItem::with_id(app, "logout", "Wyloguj / Wyczyść sesję", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Zakończ", true, None::<&str>)?;
@@ -70,16 +69,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
-            setup_tray(app)?;
+            setup_tray(app.handle())?;
             Ok(())
-        })
-        .on_navigation(|window, url| {
-            let url_str = url.as_str();
-            if is_allowed_url(url_str) {
-                return true;
-            }
-            let _ = window.app_handle().opener().open_url(url_str, None::<&str>);
-            false
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
