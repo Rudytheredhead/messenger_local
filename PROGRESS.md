@@ -143,3 +143,10 @@ Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules
 - Rozwinięta: rząd przycisków aplikacji (na razie Messenger), przycisk zwijania, pod spodem okno aplikacji.
 - Weryfikacja: build release i testy `island-core` (8/8) OK. Zrzuty ekranu i `PrintWindow` nie odzwierciedlają treści WebView2 (widoczne tylko w rzeczywistym oglądzie), więc wygląd wymaga potwierdzenia na ekranie.
 - Wypychanie na GitHub: zwykłe `git push` wiesza się na tej maszynie; działa z helperem `gh` (patrz pamięć agenta).
+
+### Poprawki wyglądu — druga runda (2026-11-22)
+- Przyczyna czarnego artefaktu i braku przycisków aplikacji: zwinięty pasek `.tab` (flex:1) nie był ukrywany w stanie rozwiniętym, więc pasek z przyciskami spadał na środek i był przykrywany przez WebView Messengera (y=56).
+- Naprawa: `.expanded .tab {display:none}`, nieprzezroczyste tło wyspy, grubszy szewron SVG wycentrowany.
+- Weryfikacja: zrzuty samego WebView wyspy przez CDP (`--remote-debugging-port`, tylko na czas testu). Geometria: zwinięty szewron 47–73 px w pasku 120 px; rozwinięty pasek y=0, przycisk aplikacji wycentrowany.
+- Uwaga bezpieczeństwa: `--remote-debugging-port` daje lokalnym procesom dostęp do WebView (w tym sesji Messengera). Używać wyłącznie do testów, nigdy w buildzie użytkownika.
+- Narzędzie diagnostyczne: skrypt CDP w `C:/Users/podwo/AppData/Local/hermes/cache/scratch/` (nie w repo).

@@ -1,7 +1,7 @@
 /* Interfejs wyspy. Tło przezroczyste — okno jest transparent, kształt rysuje .island. */
 :root {
   color-scheme: dark;
-  --glass: rgba(18, 18, 22, 0.82);
+  --glass: #17171c; /* nieprzezroczyste: przezroczyste okno + blur dawały czarne artefakty */
   --fg: #f2f2f5;
   --muted: #9a9aa5;
   --accent: #0a84ff;
@@ -29,8 +29,6 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--glass);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
   color: var(--fg);
   overflow: hidden;
 }
@@ -47,12 +45,13 @@ body {
   justify-content: center;
   cursor: pointer;
 }
-.chevron {
-  font-size: 12px;
-  line-height: 1;
+.chev {
+  width: 26px;
+  height: 14px;
   color: var(--muted);
+  display: block;
 }
-.tab:hover .chevron {
+.tab:hover .chev {
   color: var(--fg);
 }
 .badge {
@@ -82,6 +81,9 @@ body {
 /* Rozwinięty: rząd przycisków aplikacji + kontener okna */
 .collapsed .bar,
 .collapsed .content {
+  display: none;
+}
+.expanded .tab {
   display: none;
 }
 .expanded .island {
@@ -124,12 +126,18 @@ body {
 .icon-btn {
   width: 28px;
   height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 14px;
   cursor: pointer;
+}
+.icon-btn .chev {
+  width: 22px;
+  height: 12px;
 }
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);

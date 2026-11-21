@@ -67,3 +67,11 @@ Ten plik to aktualny plan. Statusy: ✅ zrobione · 🔄 w toku · ⏳ do zrobie
 - ✅ Rozwinięta wyspa: rząd okrągłych przycisków aplikacji u góry (na razie tylko Messenger), przycisk zwijania ⌃, pod spodem okno aplikacji (420×620 px).
 - ✅ Wymiary w `island-core` (`COLLAPSED_SIZE`, `BAR_HEIGHT = 56`, `TOP_MARGIN = 0`).
 - 🧪 Wizualnie niepotwierdzone po stronie agenta: zrzuty ekranu i `PrintWindow` nie pokazują treści WebView2 (wyszła czerń/brak). Wymaga oglądu na ekranie.
+
+### Poprawki wyglądu (2026-11-22, druga runda)
+- ✅ Strzałka zwinięta: gruby szewron SVG (stroke 3.5), wycentrowany w pasku 120×18.
+- ✅ Przycisk zwijania w rozwiniętym pasku: ten sam szewron, skierowany w górę.
+- ✅ Czarny artefakt usunięty: zwinięty pasek `.tab` był ukrywany tylko przy zwinięciu; teraz ukrywany także przy rozwinięciu (`.expanded .tab`). Przy `flex:1` pasek aplikacji spadał na środek i był zasłonięty przez WebView Messengera.
+- ✅ Tło wyspy nieprzezroczyste (`#17171c`), bez `backdrop-filter` — przezroczyste okno z blurem dawało czarne artefakty.
+- ✅ Weryfikacja przez CDP WebView wyspy (zrzut samego interfejsu): pasek na y=0, przycisk aplikacji wycentrowany, brak artefaktu.
+- ⚠️ Instancja testowa z `--remote-debugging-port` była zatrzymana po weryfikacji; port nie jest częścią normalnego uruchomienia.

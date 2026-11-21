@@ -10,14 +10,14 @@
     <div class="island">
       <!-- Zwinięty pasek przy górnej krawędzi -->
       <div class="tab" id="tab" role="button" tabindex="0" aria-label="Rozwiń">
-        <span class="chevron" aria-hidden="true">⌄</span>
+        <svg class="chev" viewBox="0 0 26 14" aria-hidden="true"><path d="M3 3 L13 11 L23 3" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span class="badge" id="tab-badge" hidden></span>
       </div>
 
       <!-- Rozwinięta wyspa: przyciski aplikacji -->
       <header class="bar" data-tauri-drag-region>
         <nav class="apps" id="apps" aria-label="Aplikacje"></nav>
-        <button class="icon-btn" id="collapse" title="Zwiń" aria-label="Zwiń">⌃</button>
+        <button class="icon-btn" id="collapse" title="Zwiń" aria-label="Zwiń"><svg class="chev" viewBox="0 0 26 14" aria-hidden="true"><path d="M3 11 L13 3 L23 11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </header>
 
       <!-- Kontener na lekkie moduły HTML/JS (Messenger ma własny natywny WebView) -->
