@@ -2,15 +2,26 @@
 name = "messenger_local"
 version = "0.1.0"
 edition = "2024"
-description = "Ultra-lekkowy wrapper Messenger Desktop (Tauri v2) — prywatność, bezpieczeństwo, minimalne RAM"
+description = "Dynamic Island dla Windows 11 (Tauri v2) — moduł Messenger"
 license = "MIT"
 
 [dependencies]
-tauri = { version = "2.0", features = ["tray-icon"] }
+tauri = { version = "2.0", features = ["tray-icon", "unstable"] }
 tauri-plugin-opener = "2.0"
 tauri-plugin-notification = "2.0"
+tauri-plugin-global-shortcut = "2.0"
+island-core = { path = "../crates/island-core" }
 url = { version = "2.5", features = [] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }

@@ -1,0 +1,134 @@
+/* Interfejs wyspy. Tło przezroczyste — okno jest transparent, kształt rysuje .island. */
+:root {
+  color-scheme: dark;
+  --glass: rgba(18, 18, 22, 0.78);
+  --fg: #f2f2f5;
+  --muted: #9a9aa5;
+  --accent: #0a84ff;
+  --danger: #ff453a;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.island {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+/* Widok zwinięty: tylko pigułka */
+.pill {
+  height: 36px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.grip {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: -2px;
+  cursor: grab;
+}
+.icon {
+  font-size: 14px;
+}
+.label {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.badge {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+[hidden] {
+  display: none !important;
+}
+
+/* Animacja licznika tylko gdy są nieprzeczytane i wyspa jest zwinięta (oszczędność CPU). */
+.collapsed .badge:not([hidden]) {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.85; }
+}
+
+/* Widok rozwinięty: pasek zakładek + kontener */
+.bar {
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: grab;
+}
+.tabs {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+.tab,
+.icon-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.12);
+}
+.tab:hover,
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.content {
+  flex: 1;
+}
+
+.expanded .pill {
+  display: none;
+}
+.collapsed .bar,
+.collapsed .content {
+  display: none;
+}

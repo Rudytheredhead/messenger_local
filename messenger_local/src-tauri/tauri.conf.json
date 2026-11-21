@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.messenger.local",
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {

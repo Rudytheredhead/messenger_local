@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Messenger Island</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="collapsed">
+    <div class="island">
+      <!-- Pigułka (zwinięta) -->
+      <div class="pill" id="pill" role="button" tabindex="0" aria-label="Rozwiń wyspę">
+        <span class="grip" data-tauri-drag-region aria-hidden="true">⋮⋮</span>
+        <span class="icon" id="pill-icon">◎</span>
+        <span class="label" id="pill-label">Messenger</span>
+        <span class="badge" id="pill-badge" hidden></span>
+      </div>
+
+      <!-- Pasek zakładek (rozwinięta) -->
+      <header class="bar" data-tauri-drag-region>
+        <nav class="tabs" id="tabs" aria-label="Moduły"></nav>
+        <button class="icon-btn" id="collapse" title="Zwiń" aria-label="Zwiń">▴</button>
+      </header>
+
+      <!-- Kontener na lekkie moduły HTML/JS (Messenger ma własny natywny WebView) -->
+      <main class="content" id="content"></main>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

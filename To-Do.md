@@ -1,48 +1,62 @@
-# Rola i Cel Projektu
-Jesteś starszym inżynierem oprogramowania desktopowego (Rust / TypeScript) specjalizującym się w bezpieczeństwie aplikacji (AppSec). Twoim zadaniem jest zaprojektowanie i zbudowanie ultra-lekkiej aplikacji desktopowej „Messenger Desktop Wrapper” przy użyciu frameworka **Tauri v2**, ze szczególnym naciskiem na maksymalną prywatność, bezpieczeństwo danych i minimalne zużycie RAM.
+# To-Do: Messenger Island (Dynamic Island dla Windows 11)
 
-## Główne Wymagania i Ograniczenia
-1. **Minimalne zużycie RAM:** Nie wolno używać frameworka Electron. Aplikacja musi korzystać z systemowego silnika renderującego (WebView2 na Windows, WKWebView na macOS, WebKitGTK na Linux) poprzez Tauri v2, utrzymując zużycie pamięci poniżej 100–150 MB w spoczynku.
-2. **Zgodność z Regulaminem (ToS Compliance):**
-   - Aplikacja jest wyłącznie dedykowaną przeglądarką (Single-Site Browser) ładującą oficjalny adres: `https://www.facebook.com/messages`.
-   - **ZAKAZ** używania nieoficjalnych API, inżynierii wstecznej ruchu sieciowego (MQTT/GraphQL), scrapingu DOM oraz wstrzykiwania skryptów automatyzujących.
-3. **Bezkompromisowa Ochrona Danych i Prywatność (Zero-Knowledge & Local-Only):**
-   - **Brak telemetrii i serwerów pośredniczących:** Aplikacja nie może nawiązywać ŻADNYCH połączeń sieciowych poza oficjalnymi domenami Mety (`facebook.com`, `messenger.com`, `fbcdn.net`, `fbsbx.com`). Zero analityki, zero crash-reporterów, zero zewnętrznych skryptów (CDN).
-   - **Izolacja sesji i brak dostępu do haseł:** Aplikacja nie może przechwytywać, logować ani zapisywać wpisywanych haseł, tokenów sesyjnych ani treści wiadomości. Autoryzacja odbywa się wyłącznie natywnie wewnątrz silnika WebView bezpośrednio z serwerami Mety przez szyfrowane połączenie HTTPS (TLS).
-   - **Dedykowany, odizolowany profil danych:** Skonfiguruj osobny katalog `data_directory` wyłącznie dla tej aplikacji, aby odseparować ciasteczka i pamięć podręczną od innych aplikacji systemowych.
-   - **Blokada dostępu do lokalnego systemu plików:** Zablokuj dostęp skryptów webowych do natywnego API Rusta (`withGlobalTauri: false`). Strona webowa nie może mieć dostępu do dysku, schowka ani innych zasobów komputera poza standardowym oknem wyboru pliku przy wysyłaniu załącznika.
-   - **Obsługa linków zewnętrznych:** Wszystkie linki spoza domen Mety muszą być otwierane w domyślnej przeglądarce systemowej (`tauri-plugin-opener`).
+Poprzedni plan (wrapper Messengera, kroki 1–5) jest w historii git (commit `a5b08b9`) i w `PROGRESS.md`.
+Ten plik to aktualny plan. Statusy: ✅ zrobione · 🔄 w toku · ⏳ do zrobienia · 🧪 wymaga weryfikacji ręcznej.
 
----
+## Filar 1 — Tryb pełnoekranowy (zero kolizji z grami i filmami)
+- ✅ Wątek w tle co 500 ms (`core/fullscreen_guard.rs`).
+- ✅ Wykrycie: `SHQueryUserNotificationState` (QUNS_BUSY / D3D_FULL_SCREEN / PRESENTATION_MODE) oraz aktywne okno pokrywające monitor (`GetForegroundWindow` + `GetWindowRect` + `GetMonitorInfoW`); pulpit i pasek zadań wykluczone.
+- ✅ Automatyczne ukrycie wyspy (`fullscreen_hidden`) i przywrócenie po wyjściu z gry/filmu.
+- ✅ Ręczny przełącznik „Nie przeszkadzaj (ukryj wyspę)” w zasobniku (`user_hidden`); ma pierwszeństwo.
+- ✅ Test na żywo: pełny ekran działa (potwierdzone przez użytkownika); borderless w grze do sprawdzenia.
 
-# Plan Realizacji (Krok po Kroku)
+## Filar 2 — Architektura modułowa
+- ✅ Rdzeń: geometria, animacja, wykrywanie pełnoekranowości, skrót, zasobnik (`core/`).
+- ✅ Trait `IslandModule` + `ModuleRegistry` (`modules/mod.rs`): `id, name, icon, priority, badge`.
+- ✅ Pigułka pokazuje moduł o najwyższym priorytecie z badge > 0 (`island-core::pick_status`, testowane).
+- ✅ Pasek zakładek w rozwiniętej wyspie; kontener na lekkie moduły HTML/JS (`main#content`).
+- ✅ Messenger jako moduł (`modules/messenger.rs`).
+- ✅ Lazy loading dla innych modułów: nowe moduły bez WebView (natywny Rust lub HTML/JS). Messenger ma jedyny WebView (wymagany do działania).
 
-## Krok 1: Inicjalizacja bezpiecznego projektu Tauri v2
-- Utwórz projekt Tauri v2 bez frameworków frontendowych (właściwym interfejsem jest `https://www.facebook.com/messages`).
-- Skonfiguruj `tauri.conf.json`:
-  - Ustaw URL głównego okna na `"https://www.facebook.com/messages"`.
-  - Upewnij się, że `"withGlobalTauri": false` jest ustawione (całkowite odcięcie strony www od backendu w języku Rust).
-  - Skonfiguruj rygorystyczną politykę bezpieczeństwa treści (**CSP**), blokującą ładowanie jakichkolwiek zewnętrznych skryptów spoza domeny Mety.
-  - Wyłącz zdalne debugowanie / DevTools w wersji produkcyjnej (`release`), aby żaden zewnętrzny proces nie mógł podpiąć się pod okno i odczytać DOM.
+## Filar 3 — RAM (< 120–150 MB)
+- ✅ Brak Electron; WebView2 przez Tauri v2.
+- ✅ Przezroczyste tło pigułki (bez białego kwadratu).
+- ✅ Interfejs wyspy: czysty HTML5 + CSS3 + Vanilla TypeScript (bez React/Vue).
+- ✅ Profil `release`: `lto`, `strip`, `opt-level = "z"`, `codegen-units = 1`, `panic = "abort"` (w root workspace).
+- ✅ Usypianie widoku zwiniętego: animacja licznika tylko gdy są nieprzeczytane i wyspa zwinięta; ukryty WebView Messengera nie renderuje.
+- 🧪 Pomiar RAM po zalogowaniu (cel < 150 MB), Menedżer zadań, suma drzewa `msedgewebview2.exe`.
 
-## Krok 2: Izolacja nawigacji i filtrowanie ruchu (Rust)
-- W pliku `src-tauri/src/lib.rs` zaimplementuj rygorystyczny filtr nawigacji (`on_navigation`).
-- Zezwól na ładowanie wewnątrz WebView **wyłącznie** po protokole `https://` i **wyłącznie** dla zweryfikowanych domen: `*.facebook.com`, `*.messenger.com`, `*.fbcdn.net`, `*.fbsbx.com`.
-- Zablokuj połączenia nieszyfrowane (`http://`) oraz przekieruj każdy inny adres URL do przeglądarki systemowej za pomocą `tauri_plugin_opener::open_url`.
+## Filar 4 — Bezpieczeństwo i zgodność z regulaminem Mety
+- ✅ Filtr nawigacji (https, domeny Mety, bez loginu w URL, standardowy port) — `island-core::is_allowed_url`, testowane.
+- ✅ Obce linki → przeglądarka systemowa (`tauri-plugin-opener`); nowe okna nie tworzą dodatkowych WebView.
+- ✅ Licznik nieprzeczytanych z tytułu karty (`on_document_title_changed`), bez DOM i bez API.
+- ✅ `withGlobalTauri: false`; WebView Messengera nie ma żadnych uprawnień IPC (capability tylko dla `island-ui`).
+- ✅ Zero telemetrii; dane sesji w `data_directory` aplikacji.
+- ⏳ Dedykowana sekcja w PROGRESS.md po weryfikacji (sieć, RAM).
 
-## Krok 3: Zasobnik systemowy (Tray) i minimalne uprawnienia (Capabilities)
-- Dodaj ikonę w zasobniku systemowym (`Otwórz`, `Wyloguj / Wyczyść sesję`, `Zakończ`). Opcja „Wyczyść sesję” powinna bezpiecznie usuwać lokalny katalog danych WebView na żądanie użytkownika.
-- Zastosuj zasadę **najmniejszego uprzywilejowania (Principle of Least Privilege)** w pliku `capabilities/default.json` — przyznaj aplikacji wyłącznie absolutnie niezbędne uprawnienia (np. `opener:default` dla otwierania linków zewnętrznych oraz natywne powiadomienia), bez dostępu do `fs` (systemu plików) czy `shell` (wykonywania poleceń systemowych).
+## Krok 1 — Struktura
+- ✅ `src-tauri/src/{lib.rs, commands.rs, core/{window_manager,fullscreen_guard,tray,state}.rs, modules/{mod,messenger}.rs}`
+- ✅ `crates/island-core` — czysta logika (bez Tauri), `cargo test -p island-core`.
+- ✅ `src/` — interfejs wyspy (TypeScript + styles.css), bundlowany do `dist/`.
 
-## Krok 4: Optymalizacja RAM i kompilacja lokalna
-- W `Cargo.toml` użyj wyłącznie oficjalnych, zweryfikowanych pakietów `tauri` oraz `tauri-plugin-opener` (minimalizacja łańcucha zależności / supply chain security).
-- Skonfiguruj profil `release` (`lto = true`, `strip = true`, `opt-level = "z"`), aby zminimalizować zużycie RAM i rozmiar binarki.
+## Krok 2 — Okno wyspy (`core/window_manager.rs`)
+- ✅ Bez ramki, przezroczyste, zawsze na wierzchu, bez paska zadań, pozycja: góra-środek (DPI-aware, z uwzględnieniem monitora).
+- ✅ Animacja rozmiaru pigułka `210×36` ⇄ rozwinięta `420×620` (10 klatek, smoothstep).
+- ✅ Messenger jako dziecko okna (`unstable` multiwebview) pod paskiem 40 px.
+- ⚠️ Odchylenie od spec: spec mówi „auto-hide przy Focused(false)”. Wdrożone jest **zwinięcie do pigułki** (nie ukrycie), bo ukrywanie wyspy po każdym kliknięciu poza nią uniemożliwiałoby jej używanie. Ukrycie działa przez „Nie przeszkadzaj” i w grach.
 
-## Krok 5: Audyt Bezpieczeństwa i Weryfikacja
-1. Przedstaw listę wszystkich użytych zależności (`Cargo.toml`) wraz z krótkim uzasadnieniem, dlaczego każda z nich jest bezpieczna i niezbędna.
-2. Pokaż, jak zweryfikować w monitorze sieci (np. Wireshark / Menedżer Zasobów), że proces aplikacji łączy się wyłącznie z adresami IP należącymi do Meta Platforms.
-3. Sprawdź zużycie pamięci RAM po zalogowaniu i zminimalizowaniu okna do zasobnika.
+## Krok 3 — Skróty i zasobnik
+- ✅ Skrót globalny `Ctrl+Alt+I` (rozwija/zwija, pokazuje jeśli ukryta).
+- ✅ Zasobnik: Pokaż wyspę · Nie przeszkadzaj (ukryj) · Wyloguj / Wyczyść sesję · Zakończ.
 
----
-**Instrukcja startowa dla Agenta:**
-Wygeneruj kompletne pliki konfiguracyjne (`Cargo.toml`, `tauri.conf.json`, `capabilities/default.json`) oraz kod źródłowy `src-tauri/src/lib.rs`. Na końcu dołącz krótką sekcję „Raport Bezpieczeństwa”, potwierdzającą, w jaki sposób kod izoluje dane użytkownika.
+## Krok 4 — Profil release i build
+- ✅ Profil release w root workspace (bez duplikatu w podprojekcie).
+- ✅ `frontendDist` = `dist/`, generowany przez `npm run build` (`beforeBuildCommand`).
+- ✅ Wyłączona konsola w release (`windows_subsystem = "windows"`) — brak okna PowerShell.
+- ⏳ Instalator (`cargo tauri build`, MSI/NSIS) — nie uruchamiany.
+
+## Krok 5 — Audyt i weryfikacja
+- ✅ Testy czystej logiki: `cargo test -p island-core` (8/8).
+- ⚠️ `cargo test` dla binarki Tauri: `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU (znane, patrz PROGRESS.md).
+- ✅ Build release i start procesu (patrz PROGRESS.md, sekcja weryfikacji).
+- 🧪 Ręcznie: logowanie, animacja, skrót, zasobnik, gra/film, RAM, ruch sieciowy.

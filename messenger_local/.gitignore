@@ -30,3 +30,5 @@ NUL
 # Temporary files
 *.tmp
 *.temp
+# Node / frontend
+node_modules/

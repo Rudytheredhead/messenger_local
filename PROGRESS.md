@@ -91,3 +91,38 @@ Usunięto: martwy `src/lib.rs` (szablon `add()`), duplikat `[profile.release]` z
 - `cargo test` (binarka testowa) — `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU; testy filtra przeszły w osobnym crate. Do sprawdzenia na MSVC.
 - Brak testów E2E (WebView wymaga GUI i konta).
 - Ikona tray i okna: tylko `icon.ico`/`icon.png`; brak `icon.icns` (macOS nie jest celem na razie).
+
+
+---
+
+## 🏝️ Dynamic Island (Messenger Island) — 2026-11-21
+
+Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules), `messenger_local/crates/island-core/`, interfejs: `messenger_local/src/` (TypeScript → `dist/`).
+
+### Zrobione
+- **island-core** (crate bez Tauri): filtr URL, licznik nieprzeczytanych z tytułu, wybór modułu do pigułki, detekcja pokrycia monitora, geometria. `cargo test -p island-core`: 8/8 OK.
+- **Okno wyspy**: bez ramki, przezroczyste, bez cienia, zawsze na wierzchu, bez paska zadań, góra-środek; animacja pigułka 210×36 ⇄ 420×620.
+- **Messenger jako moduł** (`modules/messenger.rs`): child webview pod paskiem zakładek, filtr nawigacji, obce linki do przeglądarki, nowe okna bez dodatkowych WebView, licznik z tytułu karty, wylogowanie przez `clear_all_browsing_data`.
+- **Rejestr modułów** (`modules/mod.rs`): trait `IslandModule`, pigułka pokazuje moduł o najwyższym priorytecie z badge > 0.
+- **Pełny ekran** (`core/fullscreen_guard.rs`): `SHQueryUserNotificationState` + aktywne okno pokrywające monitor; wyspa ukrywa się w grach i filmach. Potwierdzone przez użytkownika na żywo.
+- **Zasobnik**: Pokaż wyspę · Nie przeszkadzaj (ukryj) · Wyloguj · Zakończ. Skrót globalny `Ctrl+Alt+I`.
+- **Frontend**: Vanilla TypeScript + esbuild, HTML/CSS, bez frameworków.
+
+### Poprawki po teście użytkownika
+- **Okno PowerShell/konsoli przy uruchomieniu release**: brakowało `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` w `main.rs`. Dodano; nagłówek PE to teraz `Windows GUI` (sprawdzone `objdump`).
+- **Biały kwadrat wokół pigułki**: domyślne białe tło WebView i cień okna. Ustawiono `background_color(0,0,0,0)` dla WebView wyspy oraz `shadow(false)` na oknie.
+
+### Odchylenia od spec
+- „Auto-hide przy Focused(false)” wdrożono jako **zwinięcie do pigułki**, nie ukrycie (ukrywanie po każdym kliknięciu obok uniemożliwiałoby użycie wyspy). Ukrycie działa przez „Nie przeszkadzaj” i w grach.
+- Messenger ładuje się od razu (nie leniwie), żeby licznik nieprzeczytanych działał przy zwiniętej wyspie. Pozostałe moduły (przyszłe) mają nie tworzyć WebView.
+
+### Weryfikacja
+- `cargo check` / `cargo build --release`: OK (jedyne ostrzeżenie: linker GNU o wielu manifestach).
+- `npm run build` (typecheck + bundle): OK.
+- Uruchomienie release: proces żyje, okno „Messenger Island”, odpowiada; ~27 MB w procesie głównym.
+- Użytkownik: pełny ekran działa, pigułka wyświetla się poprawnie (po poprawkach konsoli i tła — do potwierdzenia).
+
+### Do zrobienia / znane
+- Ręcznie: logowanie w Messengerze w child webview, animacja rozwijania, skrót, zasobnik, pomiar RAM z WebView2, ruch sieciowy.
+- `cargo test` binarki Tauri: `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU (znane).
+- Instalator (`cargo tauri build`) jeszcze nie uruchamiany.
