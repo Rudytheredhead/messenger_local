@@ -26,6 +26,9 @@ const TRANSPARENT: tauri::window::Color = tauri::window::Color(0, 0, 0, 0);
 pub const STATE_EVENT: &str = "island://state";
 
 const ANIM_STEPS: u32 = 10;
+/// Promienie dolnych rogów — zgodne z CSS (`styles.css`).
+const COLLAPSED_RADIUS: f64 = 10.0;
+const EXPANDED_RADIUS: f64 = 18.0;
 const ANIM_FRAME: Duration = Duration::from_millis(16);
 
 #[derive(Serialize, Clone, Debug)]
@@ -42,6 +45,29 @@ pub struct IslandState {
     pub fullscreen_hidden: bool,
     pub status: Option<StatusDto>,
 }
+
+/// Zaokrągla dolne rogi okna regionem Win32. Region obcina też child WebView-y (Messenger),
+/// więc CSS nie wystarcza. Górna krawędź jest rozciągnięta o promień poza okno, dzięki czemu
+/// górne rogi są poza ekranem, a tylko dolne są zaokrąglone.
+#[cfg(windows)]
+fn round_bottom_corners(hwnd: isize, scale: f64, width: f64, height: f64, radius: f64) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::Graphics::Gdi::{CreateRoundRectRgn, SetWindowRgn};
+    if hwnd == 0 {
+        return;
+    }
+    let r = (radius * scale).round() as i32;
+    let w = (width * scale).round() as i32;
+    let h = (height * scale).round() as i32;
+    unsafe {
+        let region = CreateRoundRectRgn(0, -r, w, h, 2 * r, 2 * r);
+        // System przejmuje region po udanym SetWindowRgn — nie zwalniamy go ręcznie.
+        SetWindowRgn(HWND(hwnd as *mut std::ffi::c_void), Some(region), true);
+    }
+}
+
+#[cfg(not(windows))]
+fn round_bottom_corners(_hwnd: isize, _scale: f64, _width: f64, _height: f64, _radius: f64) {}
 
 pub fn snapshot<R: Runtime>(app: &AppHandle<R>) -> IslandState {
     let flags = current_flags(app);
@@ -118,6 +144,8 @@ pub fn create<R: Runtime>(app: &AppHandle<R>, messenger: Arc<Messenger>) -> taur
 
     let (origin_x, screen_w) = monitor_metrics(&window)?;
     window.set_position(LogicalPosition::new(origin_x + centered_x(screen_w, w), TOP_MARGIN))?;
+    let hwnd = window.hwnd().map(|h| h.0 as isize).unwrap_or(0);
+    round_bottom_corners(hwnd, window.scale_factor()?, w, h, COLLAPSED_RADIUS);
     Ok(())
 }
 
@@ -164,6 +192,8 @@ pub fn set_expanded<R: Runtime>(app: &AppHandle<R>, expanded: bool) -> tauri::Re
     let current = window.inner_size()?.to_logical::<f64>(scale);
     let target = if expanded { EXPANDED_SIZE } else { COLLAPSED_SIZE };
     let (origin_x, screen_w) = monitor_metrics(&window)?;
+    let hwnd = window.hwnd().map(|h| h.0 as isize).unwrap_or(0);
+    let radius = if expanded { EXPANDED_RADIUS } else { COLLAPSED_RADIUS };
 
     thread::spawn(move || {
         for step in 1..=ANIM_STEPS {
@@ -176,6 +206,7 @@ pub fn set_expanded<R: Runtime>(app: &AppHandle<R>, expanded: bool) -> tauri::Re
                 TOP_MARGIN,
             ));
             let _ = ui.set_size(LogicalSize::new(width, height));
+            round_bottom_corners(hwnd, scale, width, height, radius);
             thread::sleep(ANIM_FRAME);
         }
         if let (true, Some(m)) = (expanded, msg) {

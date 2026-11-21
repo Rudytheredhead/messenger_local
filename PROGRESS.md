@@ -150,3 +150,8 @@ Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules
 - Weryfikacja: zrzuty samego WebView wyspy przez CDP (`--remote-debugging-port`, tylko na czas testu). Geometria: zwinięty szewron 47–73 px w pasku 120 px; rozwinięty pasek y=0, przycisk aplikacji wycentrowany.
 - Uwaga bezpieczeństwa: `--remote-debugging-port` daje lokalnym procesom dostęp do WebView (w tym sesji Messengera). Używać wyłącznie do testów, nigdy w buildzie użytkownika.
 - Narzędzie diagnostyczne: skrypt CDP w `C:/Users/podwo/AppData/Local/hermes/cache/scratch/` (nie w repo).
+
+### Przezroczysty pasek i zaokrąglone rogi (2026-11-22)
+- Usunięte tło wyspy w stanie rozwiniętym; przyciski aplikacji są samodzielnymi chipami.
+- Zaokrąglenie dolnych rogów realizowane regionem Win32 (`SetWindowRgn`), bo CSS nie obejmuje child WebView Messengera. Region aktualizowany w każdej klatce animacji. Górna krawędź rozciągnięta poza okno, żeby górne rogi nie były zaokrąglone.
+- Weryfikacja: build release, DOM (przezroczyste tła). Wizualnie niepotwierdzone przez agenta (zrzuty nie łapią WebView2).

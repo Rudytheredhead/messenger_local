@@ -86,7 +86,10 @@ body {
 .expanded .tab {
   display: none;
 }
+/* Rozwinięta: bez tła — same przyciski aplikacji wiszą w powietrzu.
+   Zaokrąglenie dolnych rogów robi region Win32 (obcina też WebView Messengera). */
 .expanded .island {
+  background: transparent;
   border-radius: 0 0 18px 18px;
 }
 .bar {
@@ -97,7 +100,6 @@ body {
   gap: 8px;
   padding: 0 10px;
   box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: grab;
 }
 .apps {
@@ -111,7 +113,8 @@ body {
   height: 36px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(28, 28, 34, 0.92);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   color: var(--fg);
   font-size: 17px;
   cursor: pointer;

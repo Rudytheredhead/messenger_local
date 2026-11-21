@@ -75,3 +75,9 @@ Ten plik to aktualny plan. Statusy: ✅ zrobione · 🔄 w toku · ⏳ do zrobie
 - ✅ Tło wyspy nieprzezroczyste (`#17171c`), bez `backdrop-filter` — przezroczyste okno z blurem dawało czarne artefakty.
 - ✅ Weryfikacja przez CDP WebView wyspy (zrzut samego interfejsu): pasek na y=0, przycisk aplikacji wycentrowany, brak artefaktu.
 - ⚠️ Instancja testowa z `--remote-debugging-port` była zatrzymana po weryfikacji; port nie jest częścią normalnego uruchomienia.
+
+### Przezroczysty pasek i zaokrąglone rogi (2026-11-22, trzecia runda)
+- ✅ Usunięte tło wyspy w stanie rozwiniętym (`rgba(0,0,0,0)`): przyciski aplikacji wiszą w powietrzu, każdy we własnym chipie z cieniem.
+- ✅ Zaokrąglone dolne rogi okna regionem Win32 (`SetWindowRgn` + `CreateRoundRectRgn`), promień 10 px zwinięty / 18 px rozwinięty. Region obcina też WebView Messengera, którego CSS by nie objął. Górna krawędź przylega do ekranu.
+- ✅ Build release przechodzi; w DOM potwierdzone przezroczyste tło.
+- 🧪 Nie potwierdzone wizualnie przez agenta: zrzut ekranu nie łapie treści WebView2 (jak wcześniej). Do potwierdzenia na ekranie.
