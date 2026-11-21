@@ -1,0 +1,9 @@
+[package]
+name = "island-core"
+version = "0.1.0"
+edition = "2021"
+description = "Czysta logika Dynamic Island (bez zależności od Tauri) — testowalna osobno"
+license = "MIT"
+
+[dependencies]
+url = "2.5"

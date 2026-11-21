@@ -1,5 +1,5 @@
 [workspace]
-members = ["src-tauri"]
+members = ["src-tauri", "crates/island-core"]
 resolver = "2"
 
 [profile.release]
