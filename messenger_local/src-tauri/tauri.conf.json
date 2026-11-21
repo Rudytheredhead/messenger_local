@@ -6,40 +6,12 @@
   "build": {
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
-    "devUrl": "https://www.facebook.com/messages",
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Messenger",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "url": "https://www.facebook.com/messages",
-        "visible": true,
-        "resizable": true,
-        "decorations": true,
-        "transparent": false,
-        "titleBarStyle": "visible",
-        "hiddenTitle": false,
-        "fullscreen": false,
-        "focus": true,
-        "maximizable": true,
-        "minimizable": true,
-        "closable": true,
-        "contentProtected": true,
-        "skipTaskbar": false,
-        "acceptFirstMouse": false,
-        "titleBarStyle": "visible"
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self' https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com; script-src 'self' https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com; style-src 'self' 'unsafe-inline' https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com; img-src 'self' data: https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com; font-src 'self' https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com; connect-src 'self' https://www.facebook.com https://*.facebook.com https://*.messenger.com https://*.fbcdn.net https://*.fbsbx.com wss://*.facebook.com wss://*.messenger.com; frame-src https://www.facebook.com https://*.facebook.com https://*.messenger.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://www.facebook.com https://*.facebook.com https://*.messenger.com;"
-    },
-    "trayIcon": {
-      "iconPath": "icons/tray-icon.png"
     },
     "withGlobalTauri": false
   },
@@ -47,6 +19,7 @@
     "active": true,
     "targets": "all",
     "icon": [
+      "icons/icon.ico",
       "icons/icon.png"
     ],
     "windows": {
