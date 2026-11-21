@@ -60,3 +60,10 @@ Ten plik to aktualny plan. Statusy: ✅ zrobione · 🔄 w toku · ⏳ do zrobie
 - ⚠️ `cargo test` dla binarki Tauri: `STATUS_ENTRYPOINT_NOT_FOUND` na toolchainie GNU (znane, patrz PROGRESS.md).
 - ✅ Build release i start procesu (patrz PROGRESS.md, sekcja weryfikacji).
 - 🧪 Ręcznie: logowanie, animacja, skrót, zasobnik, gra/film, RAM, ruch sieciowy.
+
+
+## Zmiana wyglądu (2026-11-22)
+- ✅ Zwinięta wyspa: cienki pasek przy górnej krawędzi ekranu (120×18 px, szewron ⌄, licznik nieprzeczytanych w rogu).
+- ✅ Rozwinięta wyspa: rząd okrągłych przycisków aplikacji u góry (na razie tylko Messenger), przycisk zwijania ⌃, pod spodem okno aplikacji (420×620 px).
+- ✅ Wymiary w `island-core` (`COLLAPSED_SIZE`, `BAR_HEIGHT = 56`, `TOP_MARGIN = 0`).
+- 🧪 Wizualnie niepotwierdzone po stronie agenta: zrzuty ekranu i `PrintWindow` nie pokazują treści WebView2 (wyszła czerń/brak). Wymaga oglądu na ekranie.

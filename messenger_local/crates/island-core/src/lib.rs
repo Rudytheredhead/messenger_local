@@ -6,14 +6,14 @@ use url::Url;
 /// Domeny Mety, na których wolno działać WebView (tylko https).
 pub const ALLOWED_DOMAINS: &[&str] = &["facebook.com", "messenger.com", "fbcdn.net", "fbsbx.com"];
 
-/// Rozmiar pigułki (logiczne px).
-pub const COLLAPSED_SIZE: (f64, f64) = (210.0, 36.0);
+/// Rozmiar zwiniętego paska przy górnej krawędzi ekranu (logiczne px).
+pub const COLLAPSED_SIZE: (f64, f64) = (120.0, 18.0);
 /// Rozmiar rozwiniętej wyspy (logiczne px).
 pub const EXPANDED_SIZE: (f64, f64) = (420.0, 620.0);
-/// Wysokość paska zakładek w rozwiniętym widoku.
-pub const BAR_HEIGHT: f64 = 40.0;
-/// Odstęp od górnej krawędzi ekranu.
-pub const TOP_MARGIN: f64 = 8.0;
+/// Wysokość paska z przyciskami aplikacji w rozwiniętym widoku.
+pub const BAR_HEIGHT: f64 = 56.0;
+/// Odstęp od górnej krawędzi ekranu (wyspa przylega do góry).
+pub const TOP_MARGIN: f64 = 0.0;
 
 /// Filtr nawigacji: https, bez danych logowania w URL, standardowy port, domena Mety lub jej subdomena.
 pub fn is_allowed_url(url: &Url) -> bool {

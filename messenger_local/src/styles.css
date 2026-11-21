@@ -1,7 +1,7 @@
 /* Interfejs wyspy. Tło przezroczyste — okno jest transparent, kształt rysuje .island. */
 :root {
   color-scheme: dark;
-  --glass: rgba(18, 18, 22, 0.78);
+  --glass: rgba(18, 18, 22, 0.82);
   --fg: #f2f2f5;
   --muted: #9a9aa5;
   --accent: #0a84ff;
@@ -19,116 +19,122 @@ body {
   -webkit-user-select: none;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .island {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 18px;
   background: var(--glass);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   color: var(--fg);
   overflow: hidden;
 }
 
-/* Widok zwinięty: tylko pigułka */
-.pill {
-  height: 36px;
-  flex: none;
+/* Zwinięty: schludny pasek przy górnej krawędzi (zaokrąglony tylko na dole) */
+.collapsed .island {
+  border-radius: 0 0 10px 10px;
+}
+.tab {
+  position: relative;
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  box-sizing: border-box;
+  justify-content: center;
   cursor: pointer;
 }
-.grip {
+.chevron {
+  font-size: 12px;
+  line-height: 1;
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: -2px;
-  cursor: grab;
 }
-.icon {
-  font-size: 14px;
-}
-.label {
-  flex: 1;
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.tab:hover .chevron {
+  color: var(--fg);
 }
 .badge {
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
+  position: absolute;
+  top: 1px;
+  right: 6px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
   box-sizing: border-box;
-  border-radius: 9px;
+  border-radius: 7px;
   background: var(--danger);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 14px;
   text-align: center;
 }
-[hidden] {
-  display: none !important;
-}
-
-/* Animacja licznika tylko gdy są nieprzeczytane i wyspa jest zwinięta (oszczędność CPU). */
+/* Animacja licznika tylko przy zwiniętym pasku z nieprzeczytanymi (oszczędność CPU). */
 .collapsed .badge:not([hidden]) {
   animation: pulse 1.8s ease-in-out infinite;
 }
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.12); opacity: 0.85; }
+  50% { transform: scale(1.15); opacity: 0.85; }
 }
 
-/* Widok rozwinięty: pasek zakładek + kontener */
+/* Rozwinięty: rząd przycisków aplikacji + kontener okna */
+.collapsed .bar,
+.collapsed .content {
+  display: none;
+}
+.expanded .island {
+  border-radius: 0 0 18px 18px;
+}
 .bar {
-  height: 40px;
+  height: 56px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 8px;
+  gap: 8px;
+  padding: 0 10px;
   box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: grab;
 }
-.tabs {
+.apps {
   flex: 1;
   display: flex;
-  gap: 4px;
+  justify-content: center;
+  gap: 10px;
 }
-.tab,
+.app-btn {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+  font-size: 17px;
+  cursor: pointer;
+}
+.app-btn[aria-pressed="true"] {
+  background: rgba(10, 132, 255, 0.35);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.app-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
 .icon-btn {
+  width: 28px;
   height: 28px;
-  min-width: 28px;
-  padding: 0 8px;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--fg);
+  color: var(--muted);
   font-size: 14px;
   cursor: pointer;
 }
-.tab[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.12);
-}
-.tab:hover,
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
 }
 .content {
   flex: 1;
-}
-
-.expanded .pill {
-  display: none;
-}
-.collapsed .bar,
-.collapsed .content {
-  display: none;
 }

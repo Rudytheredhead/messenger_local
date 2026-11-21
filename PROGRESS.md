@@ -136,3 +136,10 @@ Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules
 - Animacje CSS licznika działają tylko przy zwiniętej wyspie z nieprzeczytanymi (spec: usypianie animacji).
 - Weryfikacja: `cargo build --release` OK; log WebView2 potwierdził `TrySuspend success=true` i `Resume` przy rozwinięciu (diagnostyka usunięta z kodu).
 - Pomiary: zrzut z PowerShell (`Get-CimInstance` + `Get-Process`), jeden przebieg na konfigurację, zależne od stanu strony (zalogowany/niezalogowany) — traktować jako orientacyjne.
+
+
+### Wygląd wyspy (2026-11-22)
+- Zwinięta: cienki pasek przy górnej krawędzi (szewron + licznik), zamiast pigułki z ikoną i nazwą.
+- Rozwinięta: rząd przycisków aplikacji (na razie Messenger), przycisk zwijania, pod spodem okno aplikacji.
+- Weryfikacja: build release i testy `island-core` (8/8) OK. Zrzuty ekranu i `PrintWindow` nie odzwierciedlają treści WebView2 (widoczne tylko w rzeczywistym oglądzie), więc wygląd wymaga potwierdzenia na ekranie.
+- Wypychanie na GitHub: zwykłe `git push` wiesza się na tej maszynie; działa z helperem `gh` (patrz pamięć agenta).

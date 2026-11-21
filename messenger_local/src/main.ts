@@ -31,28 +31,23 @@ function el<T extends HTMLElement>(id: string): T {
 
 let activeModule: string | null = null;
 
+/** Zwinięty pasek: tylko licznik nieprzeczytanych (jeśli są). */
 function renderState(state: IslandState): void {
   document.body.classList.toggle("expanded", state.expanded);
   document.body.classList.toggle("collapsed", !state.expanded);
 
-  const icon = el<HTMLElement>("pill-icon");
-  const badge = el<HTMLElement>("pill-badge");
-  if (state.status) {
-    icon.textContent = state.status.icon;
-    badge.textContent = state.status.badge > 99 ? "99+" : String(state.status.badge);
-    badge.hidden = state.status.badge === 0;
-  } else {
-    icon.textContent = "◎";
-    badge.hidden = true;
-  }
+  const badge = el<HTMLElement>("tab-badge");
+  const count = state.status?.badge ?? 0;
+  badge.textContent = count > 99 ? "99+" : String(count);
+  badge.hidden = count === 0;
 }
 
-function renderTabs(modules: ModuleInfo[]): void {
-  const tabs = el<HTMLElement>("tabs");
-  tabs.replaceChildren(
+function renderApps(modules: ModuleInfo[]): void {
+  const apps = el<HTMLElement>("apps");
+  apps.replaceChildren(
     ...modules.map((m) => {
       const btn = document.createElement("button");
-      btn.className = "tab";
+      btn.className = "app-btn";
       btn.dataset.id = m.id;
       btn.title = m.name;
       btn.setAttribute("aria-label", m.name);
@@ -69,7 +64,7 @@ function renderTabs(modules: ModuleInfo[]): void {
 }
 
 function markActive(): void {
-  for (const btn of document.querySelectorAll<HTMLButtonElement>(".tab")) {
+  for (const btn of document.querySelectorAll<HTMLButtonElement>(".app-btn")) {
     btn.setAttribute("aria-pressed", String(btn.dataset.id === activeModule));
   }
 }
@@ -81,14 +76,14 @@ function setExpanded(expanded: boolean): void {
 async function boot(): Promise<void> {
   const modules = await invoke<ModuleInfo[]>("list_modules");
   activeModule = modules[0]?.id ?? null;
-  renderTabs(modules);
+  renderApps(modules);
 
   renderState(await invoke<IslandState>("get_state"));
   await listen<IslandState>(STATE_EVENT, (event) => renderState(event.payload));
 
-  const pill = el<HTMLElement>("pill");
-  pill.addEventListener("click", () => setExpanded(true));
-  pill.addEventListener("keydown", (e) => {
+  const tab = el<HTMLElement>("tab");
+  tab.addEventListener("click", () => setExpanded(true));
+  tab.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") setExpanded(true);
   });
   el<HTMLButtonElement>("collapse").addEventListener("click", () => setExpanded(false));
