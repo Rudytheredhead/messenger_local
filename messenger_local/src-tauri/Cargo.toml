@@ -8,7 +8,6 @@ license = "MIT"
 [dependencies]
 tauri = { version = "2.0", features = ["tray-icon", "unstable"] }
 tauri-plugin-opener = "2.0"
-tauri-plugin-notification = "2.0"
 tauri-plugin-global-shortcut = "2.0"
 island-core = { path = "../crates/island-core" }
 url = { version = "2.5", features = [] }
@@ -22,6 +21,9 @@ windows = { version = "0.62", features = [
     "Win32_Graphics_Gdi",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
 ] }
 
 [build-dependencies]

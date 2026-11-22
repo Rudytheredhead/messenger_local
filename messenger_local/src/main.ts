@@ -8,17 +8,10 @@ interface ModuleInfo {
   priority: number;
 }
 
-interface StatusDto {
-  id: string;
-  icon: string;
-  badge: number;
-}
-
 interface IslandState {
   expanded: boolean;
   user_hidden: boolean;
   fullscreen_hidden: boolean;
-  status: StatusDto | null;
 }
 
 const STATE_EVENT = "island://state";
@@ -31,15 +24,9 @@ function el<T extends HTMLElement>(id: string): T {
 
 let activeModule: string | null = null;
 
-/** Zwinięty pasek: tylko licznik nieprzeczytanych (jeśli są). */
 function renderState(state: IslandState): void {
   document.body.classList.toggle("expanded", state.expanded);
   document.body.classList.toggle("collapsed", !state.expanded);
-
-  const badge = el<HTMLElement>("tab-badge");
-  const count = state.status?.badge ?? 0;
-  badge.textContent = count > 99 ? "99+" : String(count);
-  badge.hidden = count === 0;
 }
 
 function renderApps(modules: ModuleInfo[]): void {

@@ -14,9 +14,8 @@ use tauri::webview::WebviewBuilder;
 use tauri::WebviewUrl;
 
 use crate::core::state::{IslandFlags, IslandStore};
-use crate::core::suspend;
-use crate::modules::messenger::{self, Messenger};
-use crate::modules::ModuleRegistry;
+use crate::core::suspend::SuspendState;
+use crate::modules::messenger::{self, Messenger, configure_webview2_low_memory};
 
 pub const ISLAND_LABEL: &str = "island";
 pub const UI_LABEL: &str = "island-ui";
@@ -32,18 +31,10 @@ const EXPANDED_RADIUS: f64 = 18.0;
 const ANIM_FRAME: Duration = Duration::from_millis(16);
 
 #[derive(Serialize, Clone, Debug)]
-pub struct StatusDto {
-    pub id: String,
-    pub icon: String,
-    pub badge: u32,
-}
-
-#[derive(Serialize, Clone, Debug)]
 pub struct IslandState {
     pub expanded: bool,
     pub user_hidden: bool,
     pub fullscreen_hidden: bool,
-    pub status: Option<StatusDto>,
 }
 
 /// Zaokrągla dolne rogi okna regionem Win32. Region obcina też child WebView-y (Messenger),
@@ -71,15 +62,10 @@ fn round_bottom_corners(_hwnd: isize, _scale: f64, _width: f64, _height: f64, _r
 
 pub fn snapshot<R: Runtime>(app: &AppHandle<R>) -> IslandState {
     let flags = current_flags(app);
-    let status = app
-        .state::<ModuleRegistry>()
-        .status()
-        .map(|s| StatusDto { id: s.id.to_string(), icon: s.icon.to_string(), badge: s.badge });
     IslandState {
         expanded: flags.expanded,
         user_hidden: flags.user_hidden,
         fullscreen_hidden: flags.fullscreen_hidden,
-        status,
     }
 }
 
@@ -107,8 +93,7 @@ fn update_flags<R: Runtime>(app: &AppHandle<R>, f: impl FnOnce(&mut IslandFlags)
 }
 
 /// Tworzy okno wyspy (bez ramki, przezroczyste, zawsze na wierzchu), jej WebView z interfejsem
-/// i WebView Messengera. Messenger ładuje się od razu, żeby licznik nieprzeczytanych działał także
-/// przy zwiniętej wyspie; podczas zwinięcia jest tylko ukryty.
+/// i WebView Messengera. Messenger ładuje się od razu, a przy zwinięciu jest uśpiany (about:blank + TrySuspend).
 pub fn create<R: Runtime>(app: &AppHandle<R>, messenger: Arc<Messenger>) -> tauri::Result<()> {
     let (w, h) = COLLAPSED_SIZE;
     let window = WindowBuilder::new(app, ISLAND_LABEL)
@@ -136,11 +121,13 @@ pub fn create<R: Runtime>(app: &AppHandle<R>, messenger: Arc<Messenger>) -> taur
         LogicalPosition::new(0.0, BAR_HEIGHT),
         LogicalSize::new(ew, eh - BAR_HEIGHT),
     )?;
+    // Skonfiguruj niski profil pamięci WebView2.
     if let Some(msg) = app.get_webview(messenger::LABEL) {
+        configure_webview2_low_memory(&msg);
         msg.hide()?;
     }
-    // Wyspa startuje zwinięta — zaplanuj ewentualne uśpienie strony.
-    suspend::schedule(app);
+    // Wyspa startuje zwinięta — zaplanuj natychmiastowe uśpienie.
+    app.state::<SuspendState>().schedule(app);
 
     let (origin_x, screen_w) = monitor_metrics(&window)?;
     window.set_position(LogicalPosition::new(origin_x + centered_x(screen_w, w), TOP_MARGIN))?;
@@ -164,8 +151,8 @@ fn monitor_metrics<R: Runtime>(window: &Window<R>) -> tauri::Result<(f64, f64)> 
     })
 }
 
-/// Rozwija lub zwija wyspę z animacją rozmiaru. Messenger jest ukrywany przed zwinięciem
-/// i pokazywany po rozwinięciu (w poprawionej geometrii pod paskiem zakładek).
+/// Rozwija lub zwija wyspę z animacją rozmiaru. Messenger jest uśpiany (about:blank + TrySuspend)
+/// przed zwinięciem i wznawiany (Resume + nawigacja na START_URL) po rozwinięciu.
 pub fn set_expanded<R: Runtime>(app: &AppHandle<R>, expanded: bool) -> tauri::Result<()> {
     if !update_flags(app, |f| f.expanded = expanded) {
         return Ok(());
@@ -179,13 +166,24 @@ pub fn set_expanded<R: Runtime>(app: &AppHandle<R>, expanded: bool) -> tauri::Re
         return Ok(());
     };
     let msg = app.get_webview(messenger::LABEL);
+
     if expanded {
-        suspend::resume(app);
+        // Resume + nawigacja na START_URL + pokaż po animacji
+        app.state::<SuspendState>().resume(app);
+        if let Some(m) = &msg {
+            if let Ok(url) = url::Url::parse(messenger::START_URL) {
+                let _ = m.navigate(url);
+            }
+        }
     } else {
+        // Ukryj + nawigacja na about:blank + zaplanuj uśpienie
         if let Some(m) = &msg {
             m.hide()?;
+            if let Ok(blank) = url::Url::parse("about:blank") {
+                let _ = m.navigate(blank);
+            }
         }
-        suspend::schedule(app);
+        app.state::<SuspendState>().schedule(app);
     }
 
     let scale = window.scale_factor()?;

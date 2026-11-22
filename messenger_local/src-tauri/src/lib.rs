@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-use crate::core::{state::IslandStore, suspend::SuspendPolicy, tray, window_manager};
+use crate::core::{state::IslandStore, suspend::SuspendState, tray, window_manager};
 use crate::modules::{messenger::Messenger, IslandModule, ModuleRegistry};
 
 fn register_shortcuts<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
@@ -27,14 +27,13 @@ fn register_shortcuts<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let messenger = Arc::new(Messenger::new());
             let modules: Vec<Arc<dyn IslandModule>> = vec![messenger.clone()];
             app.manage(ModuleRegistry::new(modules));
             app.manage(IslandStore::default());
-            app.manage(SuspendPolicy::from_env());
+            app.manage(SuspendState::new());
 
             window_manager::create(app.handle(), messenger)?;
             tray::setup(app.handle())?;

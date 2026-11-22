@@ -54,29 +54,6 @@ body {
 .tab:hover .chev {
   color: var(--fg);
 }
-.badge {
-  position: absolute;
-  top: 1px;
-  right: 6px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 4px;
-  box-sizing: border-box;
-  border-radius: 7px;
-  background: var(--danger);
-  font-size: 9px;
-  font-weight: 600;
-  line-height: 14px;
-  text-align: center;
-}
-/* Animacja licznika tylko przy zwiniętym pasku z nieprzeczytanymi (oszczędność CPU). */
-.collapsed .badge:not([hidden]) {
-  animation: pulse 1.8s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.15); opacity: 0.85; }
-}
 
 /* Rozwinięty: rząd przycisków aplikacji + kontener okna */
 .collapsed .bar,

@@ -151,7 +151,49 @@ Plan i statusy: `To-Do.md`. Kod: `messenger_local/src-tauri/src/` (core, modules
 - Uwaga bezpieczeństwa: `--remote-debugging-port` daje lokalnym procesom dostęp do WebView (w tym sesji Messengera). Używać wyłącznie do testów, nigdy w buildzie użytkownika.
 - Narzędzie diagnostyczne: skrypt CDP w `C:/Users/podwo/AppData/Local/hermes/cache/scratch/` (nie w repo).
 
+### Wygląd wyspy (2026-11-22)
+- Zwinięta: cienki pasek przy górnej krawędzi (szewron + licznik), zamiast pigułki z ikoną i nazwą.
+- Rozwinięta: rząd przycisków aplikacji (na razie Messenger), przycisk zwijania, pod spodem okno aplikacji.
+- Weryfikacja: build release i testy `island-core` (8/8) OK. Zrzuty ekranu i `PrintWindow` nie odzwierciedlają treści WebView2 (widoczne tylko w rzeczywistym oglądzie), więc wygląd wymaga potwierdzenia na ekranie.
+- Wypychanie na GitHub: zwykłe `git push` wiesza się na tej maszynie; działa z helperem `gh` (patrz pamięć agenta).
+
+### Poprawki wyglądu — druga runda (2026-11-22)
+- Przyczyna czarnego artefaktu i braku przycisków aplikacji: zwinięty pasek `.tab` (flex:1) nie był ukrywany w stanie rozwiniętym, więc pasek z przyciskami spadał na środek i był przykrywany przez WebView Messengera (y=56).
+- Naprawa: `.expanded .tab {display:none}`, nieprzezroczyste tło wyspy, grubszy szewron SVG wycentrowany.
+- Weryfikacja: zrzuty samego WebView wyspy przez CDP (`--remote-debugging-port`, tylko na czas testu). Geometria: zwinięty szewron 47–73 px w pasku 120 px; rozwinięty pasek y=0, przycisk aplikacji wycentrowany.
+- Uwaga bezpieczeństwa: `--remote-debugging-port` daje lokalnym procesom dostęp do WebView (w tym sesji Messengera). Używać wyłącznie do testów, nigdy w buildzie użytkownika.
+- Narzędzie diagnostyczne: skrypt CDP w `C:/Users/podwo/AppData/Local/hermes/cache/scratch/` (nie w repo).
+
 ### Przezroczysty pasek i zaokrąglone rogi (2026-11-22)
 - Usunięte tło wyspy w stanie rozwiniętym; przyciski aplikacji są samodzielnymi chipami.
 - Zaokrąglenie dolnych rogów realizowane regionem Win32 (`SetWindowRgn`), bo CSS nie obejmuje child WebView Messengera. Region aktualizowany w każdej klatce animacji. Górna krawędź rozciągnięta poza okno, żeby górne rogi nie były zaokrąglone.
 - Weryfikacja: build release, DOM (przezroczyste tła). Wizualnie niepotwierdzone przez agenta (zrzuty nie łapią WebView2).
+
+---
+
+## 🧠 Natychmiastowe uśpienie pamięci (2026-11-22)
+
+### Zmiany
+- **Usunięto**: mechanizm 5-minutowego opóźnienia (`DEFAULT_DELAY_SECS = 300`), zmienne środowiskowe `MESSENGER_ISLAND_AUTO_SUSPEND` / `MESSENGER_ISLAND_SUSPEND_SECS`, przełącznik „Uśpij Messengera po 5 min” z menu zasobnika.
+- **Dodano**: automatyczne zwalnianie pamięci **zawsze** po zwinięciu wyspy (i na starcie):
+  1. Ukrycie WebView `messenger` (`hide()`)
+  2. Nawigacja na `about:blank` (`Navigate(PCWSTR("about:blank"))`) — niszczy DOM, V8 heap, WebSockety
+  3. Po 200 ms (generation-based guard): `ICoreWebView2_3::TrySuspend` + czyszczenie Working Set
+     - `SetProcessWorkingSetSizeEx(usize::MIN, usize::MAX, SETPROCESSWORKINGSETSIZEEX_FLAGS::default())` dla bieżącego procesu
+     - To samo dla procesów potomnych `msedgewebview2.exe` (ToolHelp32 snapshot + `OpenProcess`)
+- **Przy rozwinięciu**: `ICoreWebView2_3::Resume` + nawigacja na `START_URL` + pokazanie WebView po animacji
+- **Niski profil pamięci WebView2** (`ICoreWebView2_19::SetMemoryUsageTargetLevel(LOW)`)
+- **Wyłączone funkcje WebView2** (`ICoreWebView2Settings`): DevTools, status bar, zoom control, built-in error page
+
+### Pliki zmienione
+- `src-tauri/src/core/suspend.rs` — pełna przepisana logika (nowa struct `SuspendState`)
+- `src-tauri/src/core/tray.rs` — usunięty przełącznik „Uśpij Messengera po 5 min”
+- `src-tauri/src/core/window_manager.rs` — używa `SuspendState`, nawigacja `about:blank`/`START_URL` w `set_expanded`
+- `src-tauri/src/modules/messenger.rs` — `pub configure_webview2_low_memory()` wywoływane w `window_manager::create()`
+- `src-tauri/Cargo.toml` — dodane feature'y Windows: `Win32_System_Diagnostics_ToolHelp`, `Win32_System_Memory`, `Win32_System_Threading`
+- `src-tauri/src/lib.rs` — `SuspendState::new()` zamiast `SuspendPolicy::from_env()`
+
+### Weryfikacja
+- `cargo test -p island-core` → 6 testów OK (geometria, filtry URL, fullscreen)
+- `cargo build --release` → binarka ~3.1 MB, bez błędów/ostrzeżeń o nieużywanym kodzie
+- `npm run build` → frontend kompiluje się bez błędów

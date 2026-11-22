@@ -1,16 +1,13 @@
 //! Moduł Messenger: izolowany WebView z oficjalną stroną `https://www.facebook.com/messages`.
-//! Licznik nieprzeczytanych czytany wyłącznie z tytułu karty (np. „(2) Messenger”) — bez DOM, bez API.
 
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
-use island_core::{is_allowed_url, unread_from_title};
+use island_core::is_allowed_url;
 use tauri::webview::{NewWindowResponse, WebviewBuilder};
 use tauri::{AppHandle, Manager, Runtime, WebviewUrl};
 use tauri_plugin_opener::OpenerExt;
 use url::Url;
 
-use crate::core::window_manager;
 use crate::modules::IslandModule;
 
 pub const LABEL: &str = "messenger";
@@ -18,17 +15,11 @@ pub const START_URL: &str = "https://www.facebook.com/messages";
 /// Wspólny katalog danych WebView (sesja Messengera przeżywa restart).
 pub const PROFILE_DIR: &str = "webview-profile";
 
-pub struct Messenger {
-    unread: AtomicU32,
-}
+pub struct Messenger;
 
 impl Messenger {
     pub fn new() -> Self {
-        Self { unread: AtomicU32::new(0) }
-    }
-
-    pub fn set_unread(&self, count: u32) {
-        self.unread.store(count, Ordering::Relaxed);
+        Self
     }
 }
 
@@ -44,9 +35,6 @@ impl IslandModule for Messenger {
     }
     fn priority(&self) -> u8 {
         100
-    }
-    fn badge(&self) -> u32 {
-        self.unread.load(Ordering::Relaxed)
     }
 }
 
@@ -86,26 +74,56 @@ fn handle_new_window<R: Runtime>(app: &AppHandle<R>, url: Url) -> NewWindowRespo
     NewWindowResponse::Deny
 }
 
+/// Konfiguruje WebView2: niski cel pamięci + wyłączenie zbędnych funkcji.
+#[cfg(windows)]
+pub fn configure_webview2_low_memory<R: Runtime>(webview: &tauri::Webview<R>) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW};
+    use windows::core::Interface;
+
+    let _ = webview.with_webview(move |platform| {
+        let controller = platform.controller();
+        unsafe {
+            let Ok(core) = controller.CoreWebView2() else {
+                return;
+            };
+            // Niski cel zużycia pamięci (ICoreWebView2_19).
+            if let Ok(core19) = core.cast::<ICoreWebView2_19>() {
+                let _ = core19.SetMemoryUsageTargetLevel(COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW);
+            }
+            // Wyłącz zbędne ustawienia.
+            if let Ok(settings) = core.Settings() {
+                let _ = settings.SetAreDevToolsEnabled(false);
+                let _ = settings.SetIsStatusBarEnabled(false);
+                let _ = settings.SetIsZoomControlEnabled(false);
+                let _ = settings.SetIsBuiltInErrorPageEnabled(false);
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn configure_webview2_low_memory<R: Runtime>(_webview: &tauri::Webview<R>) {}
+
 /// Builder WebView Messengera (dodawany jako dziecko okna wyspy).
 pub fn builder<R: Runtime>(
     app: &AppHandle<R>,
-    module: Arc<Messenger>,
+    _module: Arc<Messenger>,
 ) -> tauri::Result<WebviewBuilder<R>> {
     let profile = app.path().app_local_data_dir()?.join(PROFILE_DIR);
     let start = Url::parse(START_URL).expect("stały, poprawny URL");
 
     let nav_app = app.clone();
     let window_app = app.clone();
-    let title_app = app.clone();
 
-    Ok(WebviewBuilder::new(LABEL, WebviewUrl::External(start))
+    let builder = WebviewBuilder::new(LABEL, WebviewUrl::External(start))
         .data_directory(profile)
         .on_navigation(move |url| handle_navigation(&nav_app, url))
-        .on_new_window(move |url, _features| handle_new_window(&window_app, url))
-        .on_document_title_changed(move |_webview, title| {
-            module.set_unread(unread_from_title(&title));
-            window_manager::emit_state(&title_app);
-        }))
+        .on_new_window(move |url, _features| handle_new_window(&window_app, url));
+
+    // Ustaw niski profil pamięci i wyłącz zbędne funkcje po utworzeniu WebView.
+    // Używamy on_did_create_context lub with_webview po dodaniu do okna.
+    // Tutaj zwracamy builder, a konfigurację robimy w window_manager::create po add_child.
+    Ok(builder)
 }
 
 /// Usuwa ciasteczka, cache i pamięć lokalną WebView Messengera, potem wraca na stronę logowania.

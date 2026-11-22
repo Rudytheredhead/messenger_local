@@ -31,34 +31,6 @@ pub fn is_allowed_url(url: &Url) -> bool {
     }
 }
 
-/// Licznik nieprzeczytanych z tytułu karty: `"(2) Messenger"` → 2, `"(99+) Messenger"` → 99, brak → 0.
-pub fn unread_from_title(title: &str) -> u32 {
-    let Some(rest) = title.trim_start().strip_prefix('(') else {
-        return 0;
-    };
-    let Some(end) = rest.find(')') else {
-        return 0;
-    };
-    rest[..end].trim_end_matches('+').parse::<u32>().unwrap_or(0)
-}
-
-/// Stan modułu potrzebny do wyboru tego, co pokazuje pigułka.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Status<'a> {
-    pub id: &'a str,
-    pub priority: u8,
-    pub badge: u32,
-}
-
-/// Pigułka pokazuje moduł o najwyższym priorytecie spośród tych, które mają badge > 0.
-pub fn pick_status<'a>(items: &[Status<'a>]) -> Option<Status<'a>> {
-    items
-        .iter()
-        .copied()
-        .filter(|s| s.badge > 0)
-        .max_by_key(|s| s.priority)
-}
-
 /// Prostokąt w pikselach ekranu (jak RECT z Win32).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rect {
@@ -129,28 +101,6 @@ mod tests {
     fn blocks_credentials_and_nonstandard_ports() {
         assert!(!allowed("https://user:pass@www.facebook.com/"));
         assert!(!allowed("https://www.facebook.com:8443/"));
-    }
-
-    #[test]
-    fn parses_unread_count_from_title() {
-        assert_eq!(unread_from_title("(2) Messenger"), 2);
-        assert_eq!(unread_from_title("(99+) Messenger"), 99);
-        assert_eq!(unread_from_title("Messenger"), 0);
-        assert_eq!(unread_from_title("(abc) Messenger"), 0);
-        assert_eq!(unread_from_title("(5 Messenger"), 0);
-        assert_eq!(unread_from_title("  (7) Czat"), 7);
-    }
-
-    #[test]
-    fn picks_highest_priority_with_badge() {
-        let items = [
-            Status { id: "a", priority: 10, badge: 3 },
-            Status { id: "b", priority: 50, badge: 0 },
-            Status { id: "c", priority: 20, badge: 1 },
-        ];
-        assert_eq!(pick_status(&items).map(|s| s.id), Some("c"));
-        let none = [Status { id: "x", priority: 1, badge: 0 }];
-        assert_eq!(pick_status(&none), None);
     }
 
     #[test]

@@ -4,7 +4,6 @@ pub mod messenger;
 
 use std::sync::Arc;
 
-use island_core::{pick_status, Status};
 use serde::Serialize;
 
 /// Wspólny interfejs modułu. Moduły z natywnym WebView (Messenger) i moduły lekkie (HTML/JS, Rust)
@@ -15,10 +14,6 @@ pub trait IslandModule: Send + Sync {
     fn icon(&self) -> &'static str;
     /// Wyższy priorytet wygrywa w pigułce, gdy kilka modułów ma badge > 0.
     fn priority(&self) -> u8;
-    /// Liczba do wyświetlenia na pigułce (0 = brak).
-    fn badge(&self) -> u32 {
-        0
-    }
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -27,12 +22,6 @@ pub struct ModuleInfo {
     pub name: &'static str,
     pub icon: &'static str,
     pub priority: u8,
-}
-
-pub struct StatusView {
-    pub id: &'static str,
-    pub icon: &'static str,
-    pub badge: u32,
 }
 
 pub struct ModuleRegistry {
@@ -58,20 +47,5 @@ impl ModuleRegistry {
 
     pub fn get(&self, id: &str) -> Option<&Arc<dyn IslandModule>> {
         self.modules.iter().find(|m| m.id() == id)
-    }
-
-    /// Moduł, który pokazuje pigułka w zwiniętym widoku (najwyższy priorytet z badge > 0).
-    pub fn status(&self) -> Option<StatusView> {
-        let items: Vec<Status> = self
-            .modules
-            .iter()
-            .map(|m| Status { id: m.id(), priority: m.priority(), badge: m.badge() })
-            .collect();
-        let picked = pick_status(&items)?;
-        self.get(picked.id).map(|m| StatusView {
-            id: m.id(),
-            icon: m.icon(),
-            badge: picked.badge,
-        })
     }
 }
