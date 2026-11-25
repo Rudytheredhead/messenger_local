@@ -4,8 +4,7 @@ use tauri::{
     AppHandle, Runtime,
 };
 
-use crate::core::{window_manager};
-use crate::modules::messenger;
+use crate::core::window_manager;
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "Pokaż wyspę", true, None::<&str>)?;
@@ -23,7 +22,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     let hide_item = hide.clone();
     let mut tray = TrayIconBuilder::with_id("main-tray")
-        .tooltip("Messenger Island")
+        .tooltip("TopIsland")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -34,7 +33,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                 let hidden = window_manager::toggle_user_hidden(app);
                 let _ = hide_item.set_checked(hidden);
             }
-            "logout" => messenger::logout(app),
+            "logout" => window_manager::logout_all(app),
             "quit" => app.exit(0),
             _ => {}
         })

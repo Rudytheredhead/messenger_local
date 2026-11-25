@@ -1,9 +1,9 @@
 {
-  "name": "messenger-island",
+  "name": "top-island",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Interfejs Dynamic Island (Vanilla TypeScript) dla Messenger Local",
+  "description": "Interfejs Dynamic Island (Vanilla TypeScript) dla TopIsland",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && esbuild src/main.ts --bundle --format=esm --target=es2020 --minify --outfile=dist/main.js && node scripts/copy-assets.mjs"

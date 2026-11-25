@@ -11,10 +11,19 @@ use crate::core::window_manager::{self, ISLAND_LABEL};
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 pub fn spawn<R: Runtime>(app: AppHandle<R>) {
-    thread::spawn(move || loop {
-        thread::sleep(POLL_INTERVAL);
-        let own = own_hwnd(&app);
-        window_manager::set_fullscreen_hidden(&app, is_fullscreen_foreground(own));
+    thread::spawn(move || {
+        let mut ticks: u32 = 0;
+        loop {
+            thread::sleep(POLL_INTERVAL);
+            let own = own_hwnd(&app);
+            if !window_manager::is_dialog_open(&app) && !window_manager::is_expanded(&app) {
+                window_manager::set_fullscreen_hidden(&app, is_fullscreen_foreground(own));
+            }
+            ticks = ticks.wrapping_add(1);
+            if ticks % 60 == 0 && !window_manager::is_expanded(&app) {
+                crate::core::suspend::cleanup_working_sets();
+            }
+        }
     });
 }
 

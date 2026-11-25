@@ -1,27 +1,22 @@
-//! Natychmiastowe uśpianie WebView Messengera przy zwinięciu wyspy.
-//!
-//! Po zwinięciu wyspy:
-//! 1. Ukrywa WebView messenger.
-//! 2. Nawiguje na about:blank (zniszczy DOM, V8 heap, WebSockety).
-//! 3. Po krótkim opóźnieniu (200 ms) wywołuje TrySuspend + czyści Working Set.
-//! Przy rozwinięciu: Resume + nawigacja na START_URL + pokazanie WebView.
+//! Uśpianie wyłączonych WebView aplikacji (about:blank + TrySuspend + Working Set cleanup).
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
 use tauri::{AppHandle, Manager, Runtime};
 use windows::core::PCWSTR;
 
-use crate::modules::messenger;
+use crate::modules;
 
 /// Opóźnienie przed TrySuspend/WorkingSet cleanup (ms) – daje czas na about:blank nawigację.
 const SUSPEND_DELAY_MS: u64 = 200;
 
-/// Stan uśpienia – generation chroni przed uśpieniem po ponownym rozwinięciu.
+/// Stan uśpienia per WebView – generation chroni przed uśpieniem po ponownym włączeniu modułu.
 #[derive(Default)]
 pub struct SuspendState {
-    generation: AtomicU64,
+    generations: Mutex<HashMap<String, u64>>,
 }
 
 impl SuspendState {
@@ -29,48 +24,63 @@ impl SuspendState {
         Self::default()
     }
 
-    /// Wywoływane przy każdym zwinięciu (i na starcie, bo wyspa startuje zwinięta).
-    pub fn schedule<R: Runtime>(&self, app: &AppHandle<R>) {
-        let r#gen = self.generation.fetch_add(1, Ordering::Relaxed) + 1;
+    fn bump_generation(&self, label: &str) -> u64 {
+        let mut map = self.generations.lock().unwrap_or_else(|e| e.into_inner());
+        let next = map.get(label).copied().unwrap_or(0) + 1;
+        map.insert(label.to_string(), next);
+        next
+    }
+
+    fn current_generation(&self, label: &str) -> u64 {
+        let map = self.generations.lock().unwrap_or_else(|e| e.into_inner());
+        map.get(label).copied().unwrap_or(0)
+    }
+
+    /// Planuje uśpienie wskazanego WebView po zamknięciu modułu (lub na starcie).
+    pub fn schedule_webview<R: Runtime>(&self, app: &AppHandle<R>, label: &str) {
+        let r#gen = self.bump_generation(label);
         let app = app.clone();
+        let label = label.to_string();
         thread::spawn(move || {
             thread::sleep(Duration::from_millis(SUSPEND_DELAY_MS));
-            // Sprawdź, czy w międzyczasie nie nastąpiło rozwinięcie (nowe generation).
-            let current = app.state::<SuspendState>().generation.load(Ordering::Relaxed);
-            if current == r#gen && !is_expanded(&app) {
-                set_suspended(&app, true);
+            let current = app.state::<SuspendState>().current_generation(&label);
+            if current == r#gen && !is_module_running(&app, &label) {
+                set_suspended(&app, &label, true);
             }
         });
     }
 
-    /// Wywoływane przy rozwinięciu – zawsze wznawia.
-    pub fn resume<R: Runtime>(&self, app: &AppHandle<R>) {
-        self.generation.fetch_add(1, Ordering::Relaxed);
-        set_suspended(app, false);
+    /// Planuje uśpienie wszystkich domyślnie wyłączonych WebView na starcie aplikacji.
+    pub fn schedule_all<R: Runtime>(&self, app: &AppHandle<R>) {
+        for &label in modules::WEBVIEW_LABELS {
+            self.schedule_webview(app, label);
+        }
+    }
+
+    /// Wznawia wskazany WebView przy włączaniu aplikacji przez użytkownika.
+    pub fn resume_webview<R: Runtime>(&self, app: &AppHandle<R>, label: &str) {
+        self.bump_generation(label);
+        set_suspended(app, label, false);
     }
 }
 
-fn is_expanded<R: Runtime>(app: &AppHandle<R>) -> bool {
+fn is_module_running<R: Runtime>(app: &AppHandle<R>, label: &str) -> bool {
     use crate::core::state::IslandStore;
     let store = app.state::<IslandStore>();
     let guard = store.0.lock().unwrap_or_else(|e| e.into_inner());
-    guard.expanded
+    guard.is_module_running(label)
 }
 
 #[cfg(windows)]
-fn set_suspended<R: Runtime>(app: &AppHandle<R>, suspend: bool) {
+fn set_suspended<R: Runtime>(app: &AppHandle<R>, label: &str, suspend: bool) {
     use tauri::Manager as _;
-    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2_3, ICoreWebView2_19, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW};
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2_19, ICoreWebView2_3, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW,
+    };
     use webview2_com::TrySuspendCompletedHandler;
     use windows::core::Interface;
-    use windows::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
-    };
-    use windows::Win32::System::Memory::SetProcessWorkingSetSizeEx;
-    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA};
-    use windows::Win32::System::Memory::SETPROCESSWORKINGSETSIZEEX_FLAGS;
 
-    let Some(webview) = app.get_webview(messenger::LABEL) else {
+    let Some(webview) = app.get_webview(label) else {
         return;
     };
 
@@ -99,8 +109,7 @@ fn set_suspended<R: Runtime>(app: &AppHandle<R>, suspend: bool) {
                     let _ = settings.SetIsBuiltInErrorPageEnabled(false);
                 }
 
-                // 4. Po opóźnieniu (już w wątku z schedule) – TrySuspend + WorkingSet cleanup.
-                // TrySuspend
+                // 4. TrySuspend
                 if let Ok(core3) = core.cast::<ICoreWebView2_3>() {
                     let handler = TrySuspendCompletedHandler::create(Box::new(|_hr, _ok| Ok(())));
                     let _ = core3.TrySuspend(&handler);
@@ -109,7 +118,7 @@ fn set_suspended<R: Runtime>(app: &AppHandle<R>, suspend: bool) {
                 // 5. Wyczyść Working Set: bieżący proces + procesy potomne msedgewebview2.exe.
                 cleanup_working_sets();
             } else {
-                // Resume – wznawiamy, nawigacja na START_URL robi window_manager.
+                // Resume – wznawiamy, nawigację na START_URL robi window_manager.
                 if let Ok(core3) = core.cast::<ICoreWebView2_3>() {
                     let _ = core3.Resume();
                 }
@@ -119,21 +128,27 @@ fn set_suspended<R: Runtime>(app: &AppHandle<R>, suspend: bool) {
 }
 
 #[cfg(windows)]
-fn cleanup_working_sets() {
-    use windows::Win32::Foundation::HANDLE;
+pub fn cleanup_working_sets() {
     use windows::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
     };
-    use windows::Win32::System::Memory::SetProcessWorkingSetSizeEx;
-    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA};
-    use windows::Win32::System::Memory::SETPROCESSWORKINGSETSIZEEX_FLAGS;
+    use windows::Win32::System::Memory::{
+        SetProcessWorkingSetSizeEx, SETPROCESSWORKINGSETSIZEEX_FLAGS,
+    };
+    use windows::Win32::System::Threading::{
+        GetCurrentProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
+    };
 
     unsafe {
-        // Bieżący proces - ustaw min/max working set by go wyczyścić
         let current = GetCurrentProcess();
-        let _ = SetProcessWorkingSetSizeEx(current, usize::MIN, usize::MAX, SETPROCESSWORKINGSETSIZEEX_FLAGS::default());
+        let _ = SetProcessWorkingSetSizeEx(
+            current,
+            usize::MAX,
+            usize::MAX,
+            SETPROCESSWORKINGSETSIZEEX_FLAGS::default(),
+        );
 
-        // Procesy potomne msedgewebview2.exe
         let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else {
             return;
         };
@@ -148,8 +163,17 @@ fn cleanup_working_sets() {
             loop {
                 let name = String::from_utf16_lossy(&entry.szExeFile);
                 if name.to_lowercase().contains("msedgewebview2") {
-                    if let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SET_QUOTA, false, entry.th32ProcessID) {
-                        let _ = SetProcessWorkingSetSizeEx(h, usize::MIN, usize::MAX, SETPROCESSWORKINGSETSIZEEX_FLAGS::default());
+                    if let Ok(h) = OpenProcess(
+                        PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SET_QUOTA,
+                        false,
+                        entry.th32ProcessID,
+                    ) {
+                        let _ = SetProcessWorkingSetSizeEx(
+                            h,
+                            usize::MAX,
+                            usize::MAX,
+                            SETPROCESSWORKINGSETSIZEEX_FLAGS::default(),
+                        );
                         let _ = windows::Win32::Foundation::CloseHandle(h);
                     }
                 }
@@ -163,4 +187,15 @@ fn cleanup_working_sets() {
 }
 
 #[cfg(not(windows))]
-fn set_suspended<R: Runtime>(_app: &AppHandle<R>, _suspend: bool) {}
+pub fn cleanup_working_sets() {}
+
+/// Opróżnia Working Set bieżącego procesu i procesów WebView2 po zadanym opóźnieniu.
+pub fn trim_working_sets_delayed(delay_ms: u64) {
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(delay_ms));
+        cleanup_working_sets();
+    });
+}
+
+#[cfg(not(windows))]
+fn set_suspended<R: Runtime>(_app: &AppHandle<R>, _label: &str, _suspend: bool) {}

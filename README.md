@@ -1,118 +1,50 @@
-# Messenger Local
+# TopIsland
 
-Prywatny, lekki wrapper **Messengera** dla Windows 11 — zbudowany na **Tauri v2**, bez Electrona, bez nieoficjalnych API, bez telemetrii.
+Lekka, pływająca wyspa u góry ekranu dla Windows 10/11 (zbudowana w **Tauri v2** + **WebView2** + **Rust**) w stylistyce *Dark Glassmorphism*. Skupia komunikatory, muzykę i asystentów AI w jednym wysuwanym oknie, utrzymując niskie zużycie pamięci RAM.
 
-## ✨ Cechy
+## Funkcje i aplikacje
 
-- **Dynamic Island na Windows** — rozwijane okno w stylu Dynamic Island (skrót `Ctrl+Alt+I`), ikona w zasobniku systemowym.
-- **Zero telemetrii** — żadne dane nie opuszczają Twojej maszyny.
-- **Izolowany profil** — dedykowany WebView2 data folder, ciasteczka i sesje oddzielone od przeglądarki.
-- **Strict CSP** — polityka bezpieczeństwa ograniczająca połączenia wyłącznie do domen Facebook/Messenger.
-- **System WebView2** — korzysta z WebView2 zainstalowanego w systemie (Tauri v2), bez dołączania Chromium.
-- **Globalny skrót** — `Ctrl+Alt+I` otwiera/zwija wyspę z dowolnego miejsca.
-- **Zasobnik systemowy** — aplikacja działa w tle, zamknięcie okna nie kończy procesu.
+- **Messenger** — natywny WebView z izolowanymi sesjami i bezpiecznym filtrowaniem domen (`island-core`).
+- **Discord** — pełne wsparcie dla połączeń głosowych, udostępniania ekranu (ochrona okna podczas wybierania ekranu) oraz trybu pełnoekranowego wideo/streamów.
+- **Spotify** — odtwarzacz webowy z obsługą DRM Widevine i autoplay.
+- **Gemini** — szybki dostęp do `gemini.google.com/app` jako osobny moduł na pasku.
+- **Antigravity** *(opcjonalnie, wykrywany automatycznie)* — natywny czat bez WebView2 oparty na lokalnym CLI `agy.exe`, z oddzielnym wyborem **Modelu** i **Thinking effort** (`Low` / `Medium` / `High` / `XHigh`), historią wątków i załączaniem plików/folderów (przeciągnij i upuść lub okna dialogowe). Jeśli na komputerze nie ma `agy.exe`, moduł jest automatycznie ukrywany.
 
-## 🏗 Architektura
+## Zarządzanie pamięcią
 
-```
-messenger_local/
-├── src-tauri/          # Aplikacja Rust (Tauri v2)
-│   ├── src/
-│   │   ├── main.rs     # Entry point
-│   │   ├── lib.rs      # Setup Tauri, moduły, skróty, tray
-│   │   ├── commands.rs # Komendy invoke z frontendu
-│   │   ├── core/       # Logika okna, tray, stan, fullscreen guard
-│   │   └── modules/    # Moduły wyspy (Messenger)
-│   ├── Cargo.toml
-│   └── tauri.conf.json # Konfiguracja Tauri, CSP, bundling
-├── crates/
-│   └── island-core/    # Czysta logika Dynamic Island (bez Tauri), testowalna osobno
-├── src/                # Frontend TypeScript (Vanilla, esbuild)
-│   └── main.ts         # Interfejs wyspy, komunikacja z backendem
-├── dist/               # Zbuildowany frontend (commitowany)
-├── Cargo.toml          # Workspace Cargo
-└── package.json        # Skrypty frontendu
-```
+- Wszystkie aplikacje webowe startują wyłączone (`about:blank` + stan uśpienia `TrySuspend`), dzięki czemu wyspa nie zużywa zbędnego RAM-u w tle.
+- Każdą aplikację można uruchomić kliknięciem lub klawiszem `Enter`, a zamknąć przyciskiem `×` na jej ikonie.
+- Aplikacja automatycznie chowa zwiniętą pigułkę podczas korzystania z gier i filmów na pełnym ekranie.
 
-## 🚀 Wymagania
+## Skróty klawiszowe
 
-- **Windows 10/11** z **WebView2 Runtime** (Evergreen lub Fixed Version)
-- **Rust** (toolchain `stable-x86_64-pc-windows-gnu` zalecany — MinGW UCRT)
-- **Node.js** 18+ (do buildu frontendu)
+| Skrót | Działanie |
+|---|---|
+| `Ctrl` + `~` (tylda pod `Esc`) / `Ctrl` + `Alt` + `I` | Wysuwa lub chowa wyspę (działa także w aplikacjach pełnoekranowych) |
+| `Tab` / `Shift` + `Tab` | Przełącza pomiędzy aplikacjami na pasku wyspy |
+| `Enter` | Uruchamia aktualnie wybraną, wyłączoną aplikację |
+| `Esc` | Zamyka otwarte menu lub zwija wyspę (w trybie pełnoekranowym wychodzi z pełnego ekranu wideo) |
 
-### Toolchain Rust (Windows)
+## Udostępnianie znajomym
 
-```bash
-# Zainstaluj MinGW UCRT (WinLibs)
-winget install BrechtSanders.WinLibs.POSIX.UCRT
+Aplikacja nie zawiera żadnych haseł ani tokenów — wszystkie sesje logowania oraz historia czatów są przechowywane wyłącznie lokalnie na komputerze użytkownika w `%LOCALAPPDATA%\com.messenger.local`.
 
-# Przełącz toolchain na GNU (działa out-of-the-box)
-rustup default stable-x86_64-pc-windows-gnu
-```
+Aby uruchomić **TopIsland** na innym komputerze z Windows 10/11 (z zainstalowanym WebView2 Runtime):
+1. Skopiuj do jednego folderu oba pliki z `messenger_local\target\release\`:
+   - `TopIsland.exe`
+   - `WebView2Loader.dll`
+2. Przy pierwszym uruchomieniu Windows SmartScreen może wyświetlić ostrzeżenie dla niepodpisanego pliku — wybierz **Więcej informacji → Uruchom mimo to**.
 
-> Toolchain MSVC też działa, ale wymaga `link.exe` z Visual Studio BuildTools w PATH.
+## Budowanie ze źródeł
 
-## 🛠 Budowanie
+Wymagania: **Node.js** (20+), **Rust** (`stable-x86_64-pc-windows-gnu` lub MSVC) oraz **WebView2 Runtime**.
 
-```bash
+```powershell
 cd messenger_local
-
-# Zbuduj frontend (TypeScript → dist/)
+npm install
 npm run build
-
-# Zbuduj aplikację Rust (release)
+cargo test -p island-core
 cargo build --release
-
-# Binarka: target/release/messenger_local.exe
 ```
 
-## 🏃 Uruchamianie
-
-```bash
-./target/release/messenger_local.exe
-```
-
-Aplikacja startuje w zasobniku systemowym. Użyj **`Ctrl+Alt+I`** by rozwinąć wyspę.
-
-## 🔒 Bezpieczeństwo i prywatność
-
-| Mechanizm | Szczegóły |
-|-----------|-----------|
-| **CSP** | `default-src 'self' https://www.facebook.com https://*.facebook.com ...` — brak inline skryptów, brak zewnętrznych CDN. |
-| **Profil** | `webview2-com` + dedykowany `userDataFolder` — ciasteczka, localStorage, sesje w izolacji. |
-| **Sieć** | `connect-src` ograniczony do `facebook.com`, `messenger.com`, `fbcdn.net`, `fbsbx.com` + WSS. |
-| **Ramki** | `frame-ancestors 'none'` — brak embeddingowania, brak clickjackingu. |
-| **Telemetria** | Żadna. Żadne `tauri-plugin-telemetry`, żadne analytics. |
-
-## ⌨ Skróty klawiszowe
-
-| Skrót | Akcja |
-|-------|-------|
-| `Ctrl+Alt+I` | Przełącz rozwijanie/zwijanie wyspy |
-| Klik poza wyspą | Automatyczne zwinięcie (utracona fokus) |
-| PPM na ikonie w tray | Menu: Otwórz, Zakończ |
-
-## 📦 Rozpakowywanie / Dystrybucja
-
-```bash
-cargo tauri build
-```
-
-Tworzy instalator (MSI/EXE) w `src-tauri/target/release/bundle/`. WebView2 bootstrapper jest dołączany automatycznie (`downloadBootstrapper`).
-
-## 🧪 Testowanie logiki wyspy (izolowane)
-
-```bash
-cd crates/island-core
-cargo test
-```
-
-`island-core` nie zależy od Tauri — czysta logika stanowa, łatwa do testowania jednostkowego.
-
-## 📄 Licencja
-
-MIT — patrz [LICENSE](LICENSE) (jeśli plik istnieje) lub nagłówki plików źródłowych.
-
-## 🙋 Autor
-
-Projekt prywatny, open-source. PR-y i issue mile widziane.
+Gotowe pliki wyjściowe znajdują się w `messenger_local\target\release\TopIsland.exe` oraz `messenger_local\target\release\WebView2Loader.dll`.

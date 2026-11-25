@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Messenger Island</title>
+    <title>TopIsland</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="collapsed">
@@ -16,7 +16,10 @@
       <!-- Rozwinięta wyspa: przyciski aplikacji -->
       <header class="bar" data-tauri-drag-region>
         <nav class="apps" id="apps" aria-label="Aplikacje"></nav>
-        <button class="icon-btn" id="collapse" title="Zwiń" aria-label="Zwiń"><svg class="chev" viewBox="0 0 26 14" aria-hidden="true"><path d="M3 11 L13 3 L23 11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="bar-actions">
+          <button class="icon-btn" id="collapse" title="Zwiń" aria-label="Zwiń"><svg class="chev" viewBox="0 0 26 14" aria-hidden="true"><path d="M3 11 L13 3 L23 11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="resize-btn" id="toggle-large" title="Powiększ okno" aria-label="Powiększ okno"></button>
+        </div>
       </header>
 
       <!-- Kontener na lekkie moduły HTML/JS (Messenger ma własny natywny WebView) -->

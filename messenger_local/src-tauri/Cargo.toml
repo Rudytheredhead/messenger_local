@@ -2,8 +2,16 @@
 name = "messenger_local"
 version = "0.1.0"
 edition = "2024"
-description = "Dynamic Island dla Windows 11 (Tauri v2) — moduł Messenger"
+description = "TopIsland — Dynamic Island dla Windows 11 (Tauri v2)"
 license = "MIT"
+
+[lib]
+name = "messenger_local"
+path = "src/lib.rs"
+
+[[bin]]
+name = "TopIsland"
+path = "src/main.rs"
 
 [dependencies]
 tauri = { version = "2.0", features = ["tray-icon", "unstable"] }

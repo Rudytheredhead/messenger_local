@@ -3,17 +3,45 @@
 
 use url::Url;
 
-/// Domeny Mety, na których wolno działać WebView (tylko https).
-pub const ALLOWED_DOMAINS: &[&str] = &["facebook.com", "messenger.com", "fbcdn.net", "fbsbx.com"];
+/// Dozwolone domeny dla aplikacji wyspy (Messenger, Spotify, Discord, Gemini; tylko https).
+pub const ALLOWED_DOMAINS: &[&str] = &[
+    "facebook.com",
+    "messenger.com",
+    "fbcdn.net",
+    "fbsbx.com",
+    "spotify.com",
+    "scdn.co",
+    "spotifycdn.com",
+    "discord.com",
+    "discordapp.com",
+    "discord.gg",
+    "discordapp.net",
+    "discord.media",
+    "gemini.google.com",
+    "accounts.google.com",
+    "accounts.youtube.com",
+    "myaccount.google.com",
+    "consent.google.com",
+    "gds.google.com",
+    "ogs.google.com",
+    "gstatic.com",
+    "googleusercontent.com",
+    "googleapis.com",
+    "gvt1.com",
+];
 
 /// Rozmiar zwiniętego paska przy górnej krawędzi ekranu (logiczne px).
 pub const COLLAPSED_SIZE: (f64, f64) = (120.0, 18.0);
 /// Rozmiar rozwiniętej wyspy (logiczne px).
 pub const EXPANDED_SIZE: (f64, f64) = (420.0, 620.0);
+/// Rozmiar powiększonej wyspy (logiczne px).
+pub const LARGE_SIZE: (f64, f64) = (960.0, 760.0);
 /// Wysokość paska z przyciskami aplikacji w rozwiniętym widoku.
 pub const BAR_HEIGHT: f64 = 56.0;
-/// Odstęp od górnej krawędzi ekranu (wyspa przylega do góry).
+/// Odstęp od górnej krawędzi ekranu (zwinięta wyspa przylega do góry).
 pub const TOP_MARGIN: f64 = 0.0;
+/// Odstęp rozwiniętej wyspy od górnej krawędzi ekranu (logiczne px).
+pub const EXPANDED_TOP_MARGIN: f64 = 12.0;
 
 /// Filtr nawigacji: https, bez danych logowania w URL, standardowy port, domena Mety lub jej subdomena.
 pub fn is_allowed_url(url: &Url) -> bool {
@@ -79,6 +107,12 @@ mod tests {
         assert!(allowed("https://www.messenger.com/t/1"));
         assert!(allowed("https://scontent.xx.fbcdn.net/v/a.jpg"));
         assert!(allowed("https://video.fbsbx.com/x"));
+        assert!(allowed("https://open.spotify.com/"));
+        assert!(allowed("https://i.scdn.co/image/abc"));
+        assert!(allowed("https://discord.com/app"));
+        assert!(allowed("https://cdn.discordapp.com/icons/1.png"));
+        assert!(allowed("https://gemini.google.com/app"));
+        assert!(allowed("https://accounts.google.com/"));
     }
 
     #[test]
